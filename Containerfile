@@ -74,7 +74,7 @@ COPY config/alloy/alloy.sysconfig /etc/sysconfig/alloy
 COPY config/bootc/10-systemd-boot.toml /usr/lib/bootc/install/10-systemd-boot.toml
 COPY config/ssh/99-hardening.conf /etc/ssh/sshd_config.d/99-hardening.conf
 COPY config/systemd/azureclaw-firstboot.service /usr/lib/systemd/system/azureclaw-firstboot.service
-COPY config/profile.d/azureclaw-cleanup.sh /etc/profile.d/azureclaw-cleanup.sh
+COPY scripts/firstboot-cleanup.sh /usr/libexec/azureclaw/firstboot-cleanup.sh
 COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 
 # 4. Secure File Permissions & Group Memberships
@@ -90,9 +90,10 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/sysctl.d/99-router.conf && \
     chmod 0644 /usr/lib/systemd/system/bootc-auto-update.* && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-firstboot.service && \
-    chmod 0644 /etc/profile.d/azureclaw-cleanup.sh && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
+    chmod 0755 /usr/libexec/azureclaw/firstboot-cleanup.sh && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
+    echo "session optional pam_exec.so seteuid /usr/libexec/azureclaw/firstboot-cleanup.sh" >> /etc/pam.d/postlogin && \
     mkdir -p /var/lib/alloy && \
     chown -R alloy:alloy /var/lib/alloy && \
     usermod -aG systemd-journal alloy || true && \
@@ -112,13 +113,12 @@ RUN systemctl enable NetworkManager.service && \
 
 # 6. Admin User Provisioning
 # - Zero hardcoded passwords exist in this image (admin password is locked by default)
+# - Standard wheel group membership ensures admin can sudo using their password
 # - If config/ssh/authorized_keys is provided at build time, it will be baked in automatically.
 # - If no SSH key is detected on first boot, azureclaw-firstboot.service generates a unique
 #   cryptographic random password on the fly, displays it on the console, and expires it.
 RUN useradd -m -s /bin/bash -G wheel admin && \
     passwd -l admin && \
-    echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel-nopasswd && \
-    chmod 0440 /etc/sudoers.d/wheel-nopasswd && \
     mkdir -p /home/admin/.ssh && \
     chmod 0700 /home/admin/.ssh && \
     chown -R admin:admin /home/admin/.ssh
