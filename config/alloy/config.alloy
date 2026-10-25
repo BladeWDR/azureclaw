@@ -17,14 +17,10 @@ prometheus.exporter.unix "router_node" {
 
 // Scrape local router node metrics every 15 seconds
 prometheus.scrape "router_metrics" {
-  targets    = prometheus.exporter.unix.router_node.targets
-  forward_to = [prometheus.remote_write.mimir_or_prometheus.receiver]
+  targets         = prometheus.exporter.unix.router_node.targets
+  forward_to      = [prometheus.remote_write.mimir_or_prometheus.receiver]
   scrape_interval = "15s"
-
-  extra_metrics_labels = {
-    instance = "azureclaw-router",
-    job      = "node-exporter",
-  }
+  job_name        = "node-exporter"
 }
 
 // Forward metrics to remote Prometheus / Mimir / Grafana Cloud
