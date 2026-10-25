@@ -1,6 +1,10 @@
 name: Build Azureclaw Router Images
 
 on:
+  schedule:
+    # Automated weekly build at 02:00 UTC every Tuesday
+    # Pulls fresh upstream Fedora updates, kernel patches, and security fixes
+    - cron: '0 2 * * 2'
   push:
     branches:
       - main
@@ -58,6 +62,7 @@ jobs:
         with:
           context: .
           file: ./Containerfile
+          pull: true
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

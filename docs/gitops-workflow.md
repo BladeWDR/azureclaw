@@ -38,8 +38,9 @@ With `bootc`, the container image is the immutable source of truth for your oper
 ## 1. Automated Builds with GitHub Actions
 
 The repository includes a complete CI/CD workflow at [`.github/workflows/build.yml`](../.github/workflows/build.yml) that automatically:
-1. Builds the bootc container image and pushes it to GitHub Container Registry (`ghcr.io`).
-2. Runs `bootc-image-builder` to generate:
+1. Runs on every `git push` to `main` as well as on a **weekly cron schedule** (`02:00 UTC` Tuesdays) to pull fresh upstream Fedora 44 security updates and kernel patches (`pull: true`).
+2. Builds the bootc container image and pushes it to GitHub Container Registry (`ghcr.io`).
+3. Runs `bootc-image-builder` to generate:
    - **Proxmox / KVM VM disk** (`.qcow2.zst`)
    - **Baremetal Installer ISO** (`.iso`)
 3. Computes SHA256 checksums and attaches them as workflow artifacts (and attaches them to GitHub Releases on version tags like `v1.0.0`).
