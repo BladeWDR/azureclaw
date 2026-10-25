@@ -11,12 +11,14 @@ RUN rpm --import https://rpm.grafana.com/gpg.key && \
     curl -fsSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
 # 2. Install Router, Firewall, DNS/DHCP, VPN, Bootloader, Telemetry, and Management Packages
-# We install systemd-boot-unsigned for minimal fast UEFI booting,
+# We install systemd-boot-unsigned and sbctl for modern Secure Boot key management,
 # cockpit for optional web GUI administration (similar to OPNsense),
 # qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs,
 # wireguard-tools & tailscale for VPN, and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
         systemd-boot-unsigned \
+        sbctl \
+        sbsigntools \
         NetworkManager \
         NetworkManager-tui \
         nftables \

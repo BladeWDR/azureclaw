@@ -79,6 +79,7 @@ azureclaw/
 └── docs/
     ├── proxmox-setup.md               # Step-by-step Proxmox VE testing & deployment guide
     ├── gitops-workflow.md             # Automated CI/CD updates & registry setup
+    ├── secure-boot-sbctl.md           # Bare-metal Secure Boot configuration with sbctl
     └── troubleshooting.md             # Diagnostics, rollback, and recovery procedures
 ```
 

@@ -55,6 +55,7 @@ azureclaw/
 └── docs/
     ├── proxmox-setup.md               # Step-by-step Proxmox VE testing guide
     ├── gitops-workflow.md             # Automated CI/CD pipeline and auto-updates
+    ├── secure-boot-sbctl.md           # Bare-metal Secure Boot configuration with sbctl
     └── troubleshooting.md             # Diagnostics and rollback procedures
 ```
 
@@ -133,5 +134,6 @@ ansible-playbook -i inventory.ini playbook.yml
 
 - [Proxmox VE Setup Guide](docs/proxmox-setup.md)
 - [GitOps Pipeline Guide](docs/gitops-workflow.md)
+- [Bare-Metal Secure Boot with sbctl](docs/secure-boot-sbctl.md)
 - [Troubleshooting & Rollback](docs/troubleshooting.md)
 - [Developer & Agent Guide (AGENTS.md)](AGENTS.md)
