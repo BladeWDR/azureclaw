@@ -51,7 +51,7 @@ azureclaw/
 │   │   ├── config.alloy               # Grafana Alloy pipeline (metrics scraping & log forwarding)
 │   │   └── alloy.sysconfig            # Environment variables and listen port configuration
 │   ├── bootc/
-│   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (systemd-boot, DPS)
+│   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (DPS, ext4 rootfs)
 │   ├── ssh/
 │   │   └── 99-hardening.conf          # Hardened SSH daemon config (keys only, modern ciphers)
 │   ├── sysctl.d/
