@@ -2,7 +2,8 @@
 # /etc/profile.d/azureclaw-cleanup.sh
 # Cleans temporary first-boot credentials from /etc/issue after initial login
 
-if grep -q "First-Boot Random Credential" /etc/issue 2>/dev/null; then
+if grep -q "First-Boot Random Credential" /etc/issue /etc/issue.d/10-azureclaw.issue 2>/dev/null; then
+    rm -f /etc/issue.d/10-azureclaw.issue 2>/dev/null || true
     cat << 'EOF' > /etc/issue
 
 ========================================================================

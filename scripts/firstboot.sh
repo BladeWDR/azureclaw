@@ -24,12 +24,16 @@ TEMP_PASS=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)
 echo "admin:${TEMP_PASS}" | chpasswd
 chage -d 0 admin
 
-# 3. Format console banner in /etc/issue right above the login prompt
-cat << EOF > /etc/issue
+# 3. Format console banner right above the login prompt
+# In Fedora bootc, /etc/issue is a symlink pointing to /usr/lib/issue (read-only).
+# Unlink it first so we can write a local issue file in /etc, and write to /etc/issue.d/
+rm -f /etc/issue
+mkdir -p /etc/issue.d
 
+BANNER="
 ========================================================================
    __ _ _____   _ _ __ ___  ___| | __ ___      __
-  / _` |_  / | | | '__/ _ \/ __| |/ _` \ \ /\ / /
+  / _\` |_  / | | | '__/ _ \/ __| |/ _\` \ \ /\ / /
  | (_| |/ /| |_| | | |  __/ (__| | (_| |\ V  V / 
   \__,_/___|\__,_|_|  \___|\___|_|\__,_| \_/\_/  
        First-Boot Random Credential Generation
@@ -41,11 +45,16 @@ cat << EOF > /etc/issue
 
  [!] You will be REQUIRED to set your permanent password upon logging in.
 ========================================================================
+"
 
-\S
-Kernel \r on an \m (\l)
+echo "${BANNER}" > /etc/issue
+echo "${BANNER}" > /etc/issue.d/10-azureclaw.issue
 
-EOF
+# Broadcast to all active terminals so it is visible immediately on screen
+for term in /dev/console /dev/tty0 /dev/tty1 /dev/ttyS0; do
+    if [ -w "${term}" ] 2>/dev/null; then
+        echo "${BANNER}" > "${term}" 2>/dev/null || true
+    fi
+done
 
-echo "Azureclaw: Generated one-time password for admin: ${TEMP_PASS}" > /dev/console 2>/dev/null || true
 touch "${MARKER}"
