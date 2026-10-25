@@ -90,11 +90,13 @@ jobs:
           # Test if KVM is available on runner
           ls -l /dev/kvm || true
 
-      - name: Prepare build workspace
+      - name: Prepare build workspace and pull image into Podman storage
         run: |
           mkdir -p output/artifacts
-          mkdir -p auth
-          echo "{\"auths\":{\"${{ env.REGISTRY }}\":{\"auth\":\"$(echo -n "${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}" | base64 -w0)\"}}}" > auth/config.json
+          sudo mkdir -p /var/lib/containers/storage
+          echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+          echo "==> Pulling target image into host container storage..."
+          sudo podman pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
       # -------------------------------------------------------------
       # 1. Build Proxmox / KVM Virtual Machine Disk (QCOW2)
@@ -103,16 +105,20 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_vm_qcow2 }}
         run: |
           echo "==> Generating QCOW2 image with bootc-image-builder..."
-          sudo docker run \
+          mkdir -p output/qcow2_build
+          sudo podman run \
             --rm \
             --privileged \
-            -v /dev:/dev \
-            -v "$(pwd)/auth/config.json":/root/.docker/config.json:ro \
+            --security-opt label=type:unconfined_t \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
             -v "$(pwd)/output/qcow2_build":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 \
             --target-arch x86_64 \
+            --local \
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+
+          sudo chown -R "$(id -u):$(id -g)" output/qcow2_build
 
           echo "==> Compressing QCOW2 with zstd..."
           zstd -19 -T0 "$(pwd)/output/qcow2_build/qcow2/disk.qcow2" \
@@ -128,16 +134,20 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_baremetal_iso }}
         run: |
           echo "==> Generating Baremetal ISO installer with bootc-image-builder..."
-          sudo docker run \
+          mkdir -p output/iso_build
+          sudo podman run \
             --rm \
             --privileged \
-            -v /dev:/dev \
-            -v "$(pwd)/auth/config.json":/root/.docker/config.json:ro \
+            --security-opt label=type:unconfined_t \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
             -v "$(pwd)/output/iso_build":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type anaconda-iso \
             --target-arch x86_64 \
+            --local \
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+
+          sudo chown -R "$(id -u):$(id -g)" output/iso_build
 
           echo "==> Moving generated ISO to artifacts..."
           mv "$(pwd)/output/iso_build/bootiso/install.iso" \

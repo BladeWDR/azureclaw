@@ -52,18 +52,22 @@ if [ "${ENGINE}" = "podman" ]; then
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
+        --local \
         "${IMAGE_REF}"
+    sudo chown -R "$(id -u):$(id -g)" "${OUTPUT_DIR}"
 else
     # Docker mode
-    # Note: When using Docker, bootc-image-builder pulls the image directly from the registry
-    # or container storage. If image is local, push to registry first or use Podman.
-    docker run \
+    # Note: bootc-image-builder requires /var/lib/containers/storage.
+    sudo docker run \
         --rm \
         --privileged \
+        -v /var/lib/containers/storage:/var/lib/containers/storage \
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
+        --local \
         "${IMAGE_REF}"
+    sudo chown -R "$(id -u):$(id -g)" "${OUTPUT_DIR}"
 fi
 
 echo "==> Build completed successfully!"
