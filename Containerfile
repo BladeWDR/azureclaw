@@ -51,11 +51,14 @@ RUN dnf -y install --setopt=install_weak_deps=False \
 
 # 2. System and Service Configuration
 # Disable systemd-resolved to prevent port 53 collision with dnsmasq
+# Set default system hostname to azureclaw
 RUN systemctl disable systemd-resolved.service || true && \
     systemctl mask systemd-resolved.service && \
     rm -f /etc/resolv.conf && \
     echo "nameserver 127.0.0.1" > /etc/resolv.conf && \
-    echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+    echo "nameserver 1.1.1.1" >> /etc/resolv.conf && \
+    echo "azureclaw" > /etc/hostname && \
+    printf "127.0.0.1   localhost localhost.localdomain\n::1         localhost localhost.localdomain\n127.0.1.1   azureclaw.home.arpa azureclaw\n192.168.1.1 azureclaw.home.arpa azureclaw\n" > /etc/hosts
 
 # 3. Copy Custom Configuration Files
 COPY config/sysctl.d/99-router.conf /usr/lib/sysctl.d/99-router.conf

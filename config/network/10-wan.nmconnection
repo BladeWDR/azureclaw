@@ -4,7 +4,9 @@ uuid=a6375bc1-5369-455b-bb43-e69493cf0001
 type=ethernet
 autoconnect=true
 autoconnect-priority=100
-match-device=interface-name:eth0;interface-name:ens18;interface-name:enp1s0;
+
+[match]
+interface-name=ens18;eth0;enp1s0;
 
 [ethernet]
 
