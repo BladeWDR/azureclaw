@@ -1,0 +1,13 @@
+[Unit]
+Description=Nightly Maintenance Window for Azureclaw Auto-Updates
+ConditionPathExists=/usr/bin/bootc
+
+[Timer]
+# Trigger daily at 04:00 AM local time
+OnCalendar=*-*-* 04:00:00
+# Add a random delay up to 30 minutes to prevent registry thundering herd
+RandomizedDelaySec=1800
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,43 @@
+---
+# Ansible Variables for Azureclaw Router Configuration
+
+# Router Network Configuration
+lan_interface_name: "ens19"     # In Proxmox virtio: ens19 / eth1 / enp2s0
+wan_interface_name: "ens18"     # In Proxmox virtio: ens18 / eth0 / enp1s0
+
+lan_ip: "192.168.1.1"
+lan_cidr: 24
+lan_netmask: "255.255.255.0"
+
+# DHCP & DNS Configuration (dnsmasq)
+domain_name: "home.arpa"
+dhcp_range_start: "192.168.1.50"
+dhcp_range_end: "192.168.1.200"
+dhcp_lease_time: "24h"
+
+upstream_dns_servers:
+  - "1.1.1.1"
+  - "1.0.0.1"
+  - "9.9.9.9"
+
+# Static DHCP Reservations
+dhcp_static_leases:
+  - name: "proxmox-pve1"
+    mac: "bc:24:11:22:33:44"
+    ip: "192.168.1.2"
+  - name: "nas-truenas"
+    mac: "bc:24:11:22:33:45"
+    ip: "192.168.1.10"
+
+# Port Forwarding (NAT DNAT)
+port_forwards: []
+  # Example:
+  # - protocol: "tcp"
+  #   wan_port: 8443
+  #   target_ip: "192.168.1.100"
+  #   target_port: 443
+  #   description: "Forward HTTPS to Internal Ingress"
+
+# Authorized SSH Public Keys
+admin_authorized_keys: []
+  # - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI... user@workstation"

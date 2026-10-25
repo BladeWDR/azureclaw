@@ -1,0 +1,14 @@
+========================================================================
+   __ _ _____   _ _ __ ___  ___| | __ ___      __
+  / _` |_  / | | | '__/ _ \/ __| |/ _` \ \ /\ / /
+ | (_| |/ /| |_| | | |  __/ (__| | (_| |\ V  V / 
+  \__,_/___|\__,_|_|  \___|\___|_|\__,_| \_/\_/  
+         Immutable Home Router (bootc / Fedora)
+========================================================================
+ * Core OS Status:     bootc status
+ * Upgrade Staging:    bootc upgrade [--apply]
+ * Rollback Version:   bootc rollback && systemctl reboot
+ * Firewall Ruleset:   nft list ruleset
+ * DHCP / DNS Leases:  cat /var/lib/dnsmasq/dnsmasq.leases
+ * Cockpit Console:    https://<LAN-IP>:9090
+========================================================================

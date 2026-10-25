@@ -1,0 +1,114 @@
+# Azureclaw 🦀
+
+> **Immutable, Container-Native Linux Home Router built with Fedora & bootc**
+
+Azureclaw is a modern, lightweight, declarative alternative to traditional router appliances (like OPNsense and pfSense). Built on top of **Fedora bootc**, Azureclaw combines the atomic update capabilities of containers with production Linux networking primitives.
+
+---
+
+## Key Features
+
+- 🛡️ **Immutable Operating System**: Read-only root filesystem via `bootc` and OSTree. Immune to accidental drift or runtime corruption.
+- 🔄 **Autonomous Zero-Touch Updates**: Automatic image pulls and staged deployments with configurable maintenance windows and instant rollback.
+- ⚡ **Modern High-Performance Networking**:
+  - **Firewall & NAT**: Declarative, high-speed `nftables` ruleset.
+  - **DHCP & DNS**: `dnsmasq` for ultra-lightweight DHCP leases and caching DNS resolver with DNSSEC support.
+  - **Interface Management**: `NetworkManager` with declarative keyfiles.
+  - **Kernel Tuning**: BBR congestion control, fq_codel queueing, and hardened sysctls.
+- ⚙️ **GitOps & Ansible Ready**:
+  - **GitOps**: Base OS, firewall, and packages version-controlled in Git and built via CI.
+  - **Ansible**: Post-deployment site customization for dynamic reservations, WireGuard keys, and secrets in persistent `/etc`.
+- 🖥️ **Proxmox VE Native**: Pre-configured with `qemu-guest-agent` for instant IP detection, clean shutdown signaling, and snapshot freezing. Optional Cockpit Web UI on LAN.
+
+---
+
+## Repository Structure
+
+```
+azureclaw/
+├── AGENTS.md                          # Architectural decisions & agent guidelines
+├── README.md                          # Project documentation
+├── Containerfile                      # Fedora bootc container definition
+├── config/
+│   ├── sysctl.d/99-router.conf        # Network forwarding & kernel tuning
+│   ├── nftables/nftables.conf         # Stateful router firewall & NAT rules
+│   ├── dnsmasq/dnsmasq.conf           # DHCP server & DNS caching resolver
+│   ├── network/                       # Declarative NetworkManager profiles (WAN & LAN)
+│   ├── systemd/                       # Auto-update timer and service definitions
+│   └── motd                           # Custom console status banner
+├── ansible/
+│   ├── inventory.example.ini          # Sample inventory for router fleets
+│   ├── playbook.yml                   # Post-deployment site-customization playbook
+│   └── vars/main.yml                  # Configurable subnets, leases, and port forwards
+├── scripts/
+│   ├── build-container.sh             # Build local container image
+│   ├── build-disk.sh                  # Generate QCOW2 image via bootc-image-builder
+│   └── deploy-proxmox-vm.sh           # Automated Proxmox VM deployment script
+└── docs/
+    ├── proxmox-setup.md               # Step-by-step Proxmox VE testing guide
+    ├── gitops-workflow.md             # Automated CI/CD pipeline and auto-updates
+    └── troubleshooting.md             # Diagnostics and rollback procedures
+```
+
+---
+
+## Quickstart: Testing in Proxmox VE
+
+### 1. Build the Container Image
+```bash
+./scripts/build-container.sh
+```
+
+### 2. Export QCOW2 Disk for Proxmox
+```bash
+./scripts/build-disk.sh azureclaw:latest
+```
+*(The output disk is saved to `output/qcow2/disk.qcow2`)*
+
+### 3. Deploy to Proxmox VE
+Copy the disk to your Proxmox host and run:
+```bash
+./scripts/deploy-proxmox-vm.sh <VMID> <STORAGE_POOL> /path/to/disk.qcow2
+```
+*For detailed Proxmox isolated network setup and test client validation, see [docs/proxmox-setup.md](docs/proxmox-setup.md).*
+
+---
+
+## Configuration Management
+
+### Approach 1: GitOps (Recommended for Base OS)
+1. Fork or clone this repository.
+2. Set up GitHub Actions using [docs/gitops-workflow.md](docs/gitops-workflow.md).
+3. The router automatically checks for new image versions and stages updates nightly at 04:00 AM.
+
+### Approach 2: Ansible (Recommended for Site-Specific Settings)
+To manage DHCP reservations, static leases, or port forwarding dynamically:
+```bash
+cd ansible
+cp inventory.example.ini inventory.ini
+# Edit vars/main.yml with your desired IP ranges and static leases
+ansible-playbook -i inventory.ini playbook.yml
+```
+
+---
+
+## Operational Commands
+
+| Action | Command |
+|---|---|
+| View active OS deployment | `bootc status` |
+| Manually trigger update check | `bootc upgrade` |
+| Apply staged update and reboot | `bootc upgrade --apply` |
+| Instant rollback to previous OS | `bootc rollback && systemctl reboot` |
+| View active firewall ruleset | `nft list ruleset` |
+| View active DHCP leases | `cat /var/lib/dnsmasq/dnsmasq.leases` |
+| Cockpit Web Console | `https://192.168.1.1:9090` |
+
+---
+
+## Documentation
+
+- [Proxmox VE Setup Guide](docs/proxmox-setup.md)
+- [GitOps Pipeline Guide](docs/gitops-workflow.md)
+- [Troubleshooting & Rollback](docs/troubleshooting.md)
+- [Developer & Agent Guide (AGENTS.md)](AGENTS.md)

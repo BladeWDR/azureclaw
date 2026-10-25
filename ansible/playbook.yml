@@ -1,0 +1,92 @@
+---
+- name: Configure Azureclaw Immutable Router
+  hosts: routers
+  become: true
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Ensure .ssh directory exists for admin
+      file:
+        path: /home/admin/.ssh
+        state: directory
+        owner: admin
+        group: admin
+        mode: '0700'
+
+    - name: Configure authorized keys for admin user
+      authorized_key:
+        user: admin
+        key: "{{ item }}"
+        state: present
+      loop: "{{ admin_authorized_keys }}"
+      when: admin_authorized_keys | length > 0
+
+    - name: Configure custom dnsmasq configuration (DHCP & Static Leases)
+      copy:
+        dest: /etc/dnsmasq.d/99-ansible-custom.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Managed by Ansible - Do not edit manually
+          domain={{ domain_name }}
+          local=/{{ domain_name }}/
+          dhcp-range={{ dhcp_range_start }},{{ dhcp_range_end }},{{ lan_netmask }},{{ dhcp_lease_time }}
+          dhcp-option=option:router,{{ lan_ip }}
+          dhcp-option=option:dns-server,{{ lan_ip }}
+
+          {% for dns in upstream_dns_servers %}
+          server={{ dns }}
+          {% endfor %}
+
+          {% for lease in dhcp_static_leases %}
+          dhcp-host={{ lease.mac }},{{ lease.name }}.{{ domain_name }},{{ lease.ip }}
+          {% endfor %}
+      notify: Restart dnsmasq
+
+    - name: Configure custom nftables port forwards
+      copy:
+        dest: /etc/nftables/99-port-forwards.nft
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Managed by Ansible - Port forwards
+          {% if port_forwards | length > 0 %}
+          table ip nat {
+              chain prerouting {
+                  {% for fwd in port_forwards %}
+                  iifname "{{ wan_interface_name }}" {{ fwd.protocol }} dport {{ fwd.wan_port }} dnat to {{ fwd.target_ip }}:{{ fwd.target_port }}
+                  {% endfor %}
+              }
+          }
+          table inet router {
+              chain forward {
+                  {% for fwd in port_forwards %}
+                  ip daddr {{ fwd.target_ip }} {{ fwd.protocol }} dport {{ fwd.target_port }} ct state new accept
+                  {% endfor %}
+              }
+          }
+          {% endif %}
+      notify: Reload nftables
+
+    - name: Check bootc image deployment status
+      command: bootc status
+      register: bootc_status_out
+      changed_when: false
+
+    - name: Display current bootc deployment
+      debug:
+        msg: "{{ bootc_status_out.stdout_lines }}"
+
+  handlers:
+    - name: Restart dnsmasq
+      systemd:
+        name: dnsmasq
+        state: restarted
+
+    - name: Reload nftables
+      systemd:
+        name: nftables
+        state: reloaded

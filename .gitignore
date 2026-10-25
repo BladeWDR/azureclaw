@@ -1,0 +1,15 @@
+# Build artifacts & output images
+output/
+*.qcow2
+*.raw
+*.iso
+
+# Ansible
+ansible/inventory.ini
+ansible/*.retry
+.ansible/
+
+# Temporary & Editor files
+*.swp
+*~
+.DS_Store
