@@ -122,7 +122,6 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type qcow2 \
             --target-arch x86_64 \
-            --local \
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
           sudo chown -R "$(id -u):$(id -g)" output/qcow2_build
@@ -151,7 +150,6 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type anaconda-iso \
             --target-arch x86_64 \
-            --local \
             "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
 
           sudo chown -R "$(id -u):$(id -g)" output/iso_build

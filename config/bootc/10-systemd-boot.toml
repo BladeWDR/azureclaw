@@ -9,4 +9,4 @@ bootloader = "systemd"
 discoverable-partitions = true
 
 # Recommended filesystem for bootc appliance
-filesystem = "ext4"
+root-fs-type = "ext4"

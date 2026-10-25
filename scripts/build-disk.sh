@@ -52,7 +52,6 @@ if [ "${ENGINE}" = "podman" ]; then
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
-        --local \
         "${IMAGE_REF}"
     sudo chown -R "$(id -u):$(id -g)" "${OUTPUT_DIR}"
 else
@@ -65,7 +64,6 @@ else
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
-        --local \
         "${IMAGE_REF}"
     sudo chown -R "$(id -u):$(id -g)" "${OUTPUT_DIR}"
 fi
