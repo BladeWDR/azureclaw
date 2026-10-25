@@ -149,11 +149,20 @@ There are three ways to access the router initially:
 
 #### Method A: Proxmox Web Console (NoVNC / Terminal)
 1. Open VM `900` -> **Console** in Proxmox.
-2. At the login prompt:
-   - **Username**: `admin`
-   - **Password**: `azureclaw`
-3. Because the initial password is expired by default, the system will immediately prompt you to set your new permanent password.
-4. *(Note: Because SSH password authentication is disabled by security policy, the password `azureclaw` only functions on the physical/hypervisor console).*
+2. If no SSH key or Cloud-Init drive was provided, Azureclaw's first-boot security service automatically generates a **unique 16-character cryptographic random password** on the fly and prints it directly on the console screen above the login prompt:
+   ```text
+   ========================================================================
+    [!] A unique, temporary password was generated for console user 'admin':
+
+        Username: admin
+        Password: <random-16-char-string>
+
+    [!] You will be REQUIRED to set your permanent password upon logging in.
+   ========================================================================
+   ```
+3. Enter `admin` and the displayed temporary password.
+4. The system will immediately require you to type your new permanent password. Once logged in, the temporary password banner is automatically cleared from the console.
+5. *(Note: There are zero hardcoded passwords baked into the image. Furthermore, SSH password login is disabled by policy, so this temporary credential only works on the hypervisor/physical console).*
 
 #### Method B: Bake Your SSH Key into the Image Build
 Before building the container image, copy your workstation's public key:

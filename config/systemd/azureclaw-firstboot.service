@@ -1,0 +1,15 @@
+[Unit]
+Description=Azureclaw First-Boot Security Initialization
+ConditionPathExists=!/var/lib/azureclaw/firstboot.done
+Before=getty.target systemd-user-sessions.service
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/azureclaw/firstboot.sh
+RemainAfterExit=yes
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target
