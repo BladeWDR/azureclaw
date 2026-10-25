@@ -62,6 +62,7 @@ RUN systemctl disable systemd-resolved.service || true && \
 # 3. Copy Custom Configuration Files
 COPY config/sysctl.d/99-router.conf /usr/lib/sysctl.d/99-router.conf
 COPY config/nftables/nftables.conf /etc/nftables/nftables.conf
+COPY config/nftables/nftables.conf /etc/sysconfig/nftables.conf
 COPY config/dnsmasq/dnsmasq.conf /etc/dnsmasq.conf
 COPY config/motd /etc/motd
 COPY config/network/10-wan.nmconnection /etc/NetworkManager/system-connections/10-wan.nmconnection
@@ -82,6 +83,7 @@ COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0600 /etc/ssh/sshd_config.d/99-hardening.conf && \
     chmod 0644 /etc/nftables/nftables.conf && \
+    chmod 0644 /etc/sysconfig/nftables.conf && \
     chmod 0644 /etc/dnsmasq.conf && \
     chmod 0644 /etc/alloy/config.alloy && \
     chmod 0644 /etc/sysconfig/alloy && \
@@ -91,6 +93,8 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /etc/profile.d/azureclaw-cleanup.sh && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
+    mkdir -p /var/lib/alloy && \
+    chown -R alloy:alloy /var/lib/alloy && \
     usermod -aG systemd-journal alloy || true && \
     passwd -l root
 

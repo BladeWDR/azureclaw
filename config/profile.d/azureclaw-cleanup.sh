@@ -3,19 +3,11 @@
 # Cleans temporary first-boot credentials from /etc/issue after initial login
 
 if grep -q "First-Boot Random Credential" /etc/issue /etc/issue.d/10-azureclaw.issue 2>/dev/null; then
-    rm -f /etc/issue.d/10-azureclaw.issue 2>/dev/null || true
-    cat << 'EOF' > /etc/issue
-
-========================================================================
-   __ _ _____   _ _ __ ___  ___| | __ ___      __
-  / _` |_  / | | | '__/ _ \/ __| |/ _` \ \ /\ / /
- | (_| |/ /| |_| | | |  __/ (__| | (_| |\ V  V / 
-  \__,_/___|\__,_|_|  \___|\___|_|\__,_| \_/\_/  
-         Immutable Router (bootc / Fedora)
-========================================================================
-
-\S
-Kernel \r on an \m (\l)
-
-EOF
+    if [ "$(id -u)" -eq 0 ]; then
+        rm -f /etc/issue.d/10-azureclaw.issue 2>/dev/null || true
+        cat /etc/motd > /etc/issue 2>/dev/null || true
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo rm -f /etc/issue.d/10-azureclaw.issue 2>/dev/null || true
+        sudo cp -f /etc/motd /etc/issue 2>/dev/null || true
+    fi
 fi

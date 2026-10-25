@@ -55,14 +55,13 @@ prometheus.remote_write "mimir_or_prometheus" {
 // NetworkManager link changes, bootc upgrade staging, sshd logins.
 loki.source.journal "router_journal" {
   max_age       = "12h"
-  path          = "/var/log/journal"
   forward_to    = [loki.write.loki_endpoint.receiver]
   relabel_rules = loki.relabel.journal_labels.rules
 }
 
 // Extract service unit labels for clean filtering in Grafana Loki
 loki.relabel "journal_labels" {
-  forward_to = [loki.write.loki_endpoint.receiver]
+  forward_to = []
 
   rule {
     source_labels = ["__journal__systemd_unit"]
