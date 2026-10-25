@@ -7,17 +7,18 @@ LABEL org.opencontainers.image.title="azureclaw" \
 
 # 1. Add Third-Party Repositories (Grafana Alloy & Tailscale)
 RUN rpm --import https://rpm.grafana.com/gpg.key && \
-    printf "[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nrepo_gpgcheck=1\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt\n" > /etc/yum.repos.d/grafana.repo && \
-    curl -fsSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
+    rpm --import https://pkgs.tailscale.com/stable/fedora/repo.gpg && \
+    printf "[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\n" > /etc/yum.repos.d/grafana.repo && \
+    curl -fsSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo && \
+    sed -i "s/repo_gpgcheck=1/repo_gpgcheck=0/g" /etc/yum.repos.d/tailscale.repo
 
 # 2. Install Router, Firewall, DNS/DHCP, VPN, Bootloader, Telemetry, and Management Packages
-# We install systemd-boot-unsigned and sbctl for modern Secure Boot key management,
+# We install systemd-boot-unsigned and sbsigntools for minimal fast UEFI booting and signing,
 # cockpit for optional web GUI administration (similar to OPNsense),
 # qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs,
 # wireguard-tools & tailscale for VPN, and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
         systemd-boot-unsigned \
-        sbctl \
         sbsigntools \
         NetworkManager \
         NetworkManager-tui \
@@ -30,6 +31,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         alloy \
         openssh-server \
         cockpit-bridge \
+        cockpit-ws \
         cockpit-system \
         cockpit-networkmanager \
         iproute \
