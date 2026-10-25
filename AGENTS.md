@@ -29,7 +29,9 @@ This document provides system design, architectural decisions, and operational g
    - **Firewall & NAT**: Modern, declarative `nftables` (replaces legacy iptables).
    - **DHCPv4 / DHCPv6 & DNS**: `dnsmasq` for lightweight, ultra-reliable DHCP leases, local domain resolution, and DNS caching with DNSSEC/upstream forwarding.
    - **Interface Management**: `NetworkManager` with declarative keyfiles (`/etc/NetworkManager/system-connections/`).
-   - **Virtualization & Telemetry**: `qemu-guest-agent` for native Proxmox VE integration (shutdowns, IP reporting, backup freezes).
+   - **Virtualization & Telemetry**:
+     - `qemu-guest-agent` for native Proxmox VE integration (shutdowns, IP reporting, backup freezes).
+     - `alloy` (Grafana Alloy) for streaming host metrics (`node_exporter` via `prometheus.exporter.unix`) and systemd journal logs (`loki.source.journal`) to Prometheus, Mimir, and Loki.
 
 ---
 
@@ -41,6 +43,9 @@ azureclaw/
 ├── README.md                          # Quickstart & user documentation
 ├── Containerfile                      # Bootc container definition based on Fedora 41
 ├── config/
+│   ├── alloy/
+│   │   ├── config.alloy               # Grafana Alloy pipeline (metrics scraping & log forwarding)
+│   │   └── alloy.sysconfig            # Environment variables and listen port configuration
 │   ├── sysctl.d/
 │   │   └── 99-router.conf             # Kernel network tuning (forwarding, conntrack, bbr)
 │   ├── nftables/
@@ -87,7 +92,7 @@ The firewall ruleset uses standard nftables `inet` family:
   - Drops all unsolicited inbound traffic from WAN.
   - Allows established/related traffic.
   - Allows ICMP/ICMPv6 (with rate limiting) for MTU path discovery and connectivity checks.
-  - Allows SSH (`22`) and Cockpit (`9090`) ONLY from LAN interfaces (rate-limited).
+  - Allows SSH (`22`), Cockpit (`9090`), and Grafana Alloy (`12345`) ONLY from LAN interfaces (rate-limited).
   - Allows DNS (`53`) and DHCP (`67/udp`) from LAN.
 - **`forward` chain**:
   - Allows LAN -> WAN egress.

@@ -71,6 +71,23 @@
           {% endif %}
       notify: Reload nftables
 
+    - name: Configure Grafana Alloy telemetry endpoints
+      copy:
+        dest: /etc/sysconfig/alloy
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Managed by Ansible - Grafana Alloy Telemetry
+          CUSTOM_ARGS="--server.http.listen-addr=0.0.0.0:12345 --storage.path=/var/lib/alloy/data"
+          PROMETHEUS_REMOTE_WRITE_URL="{{ alloy_prometheus_remote_write_url }}"
+          LOKI_PUSH_URL="{{ alloy_loki_push_url }}"
+          PROMETHEUS_USERNAME="{{ alloy_prometheus_username }}"
+          PROMETHEUS_PASSWORD="{{ alloy_prometheus_password }}"
+          LOKI_USERNAME="{{ alloy_loki_username }}"
+          LOKI_PASSWORD="{{ alloy_loki_password }}"
+      notify: Restart alloy
+
     - name: Check bootc image deployment status
       command: bootc status
       register: bootc_status_out
@@ -90,3 +107,8 @@
       systemd:
         name: nftables
         state: reloaded
+
+    - name: Restart alloy
+      systemd:
+        name: alloy
+        state: restarted

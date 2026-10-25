@@ -5,9 +5,13 @@ LABEL org.opencontainers.image.title="azureclaw" \
       org.opencontainers.image.description="Immutable Linux Home Router built with Fedora and bootc" \
       org.opencontainers.image.source="https://github.com/BladeWDR/azureclaw"
 
-# 1. Install Router, Firewall, DNS/DHCP, and Management Packages
+# 1. Add Grafana Official Repository for Alloy Telemetry Agent
+RUN rpm --import https://rpm.grafana.com/gpg.key && \
+    printf "[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nrepo_gpgcheck=1\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt\n" > /etc/yum.repos.d/grafana.repo
+
+# 2. Install Router, Firewall, DNS/DHCP, Telemetry, and Management Packages
 # We install cockpit for optional web GUI administration (similar to OPNsense),
-# qemu-guest-agent for native Proxmox VE telemetry, and dnsmasq/nftables for core routing.
+# qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs, and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
         NetworkManager \
         NetworkManager-tui \
@@ -15,6 +19,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         dnsmasq \
         wireguard-tools \
         qemu-guest-agent \
+        alloy \
         openssh-server \
         cockpit-bridge \
         cockpit-system \
@@ -52,14 +57,20 @@ COPY config/network/10-wan.nmconnection /etc/NetworkManager/system-connections/1
 COPY config/network/20-lan.nmconnection /etc/NetworkManager/system-connections/20-lan.nmconnection
 COPY config/systemd/bootc-auto-update.service /usr/lib/systemd/system/bootc-auto-update.service
 COPY config/systemd/bootc-auto-update.timer /usr/lib/systemd/system/bootc-auto-update.timer
+COPY config/alloy/config.alloy /etc/alloy/config.alloy
+COPY config/alloy/alloy.sysconfig /etc/sysconfig/alloy
 
-# 4. Secure File Permissions
+# 4. Secure File Permissions & Group Memberships
 # NetworkManager strictly requires 0600 on connection keyfiles
+# Alloy needs systemd-journal group membership to tail host journal logs
 RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /etc/nftables/nftables.conf && \
     chmod 0644 /etc/dnsmasq.conf && \
+    chmod 0644 /etc/alloy/config.alloy && \
+    chmod 0644 /etc/sysconfig/alloy && \
     chmod 0644 /usr/lib/sysctl.d/99-router.conf && \
-    chmod 0644 /usr/lib/systemd/system/bootc-auto-update.*
+    chmod 0644 /usr/lib/systemd/system/bootc-auto-update.* && \
+    usermod -aG systemd-journal alloy || true
 
 # 5. Enable Necessary System Services
 RUN systemctl enable NetworkManager.service && \
@@ -68,6 +79,7 @@ RUN systemctl enable NetworkManager.service && \
     systemctl enable qemu-guest-agent.service && \
     systemctl enable sshd.service && \
     systemctl enable cockpit.socket && \
+    systemctl enable alloy.service && \
     systemctl enable bootc-auto-update.timer
 
 # Create placeholder admin user 'admin' (NOPASSWD sudo, user can set password/key via cloud-init/ansible)

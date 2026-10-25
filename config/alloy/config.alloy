@@ -1,0 +1,96 @@
+// /etc/alloy/config.alloy
+// Azureclaw Router Telemetry (Metrics & Logs via Grafana Alloy)
+
+// -------------------------------------------------------------
+// 1. Host & Router Node Metrics (prometheus.exporter.unix)
+// -------------------------------------------------------------
+// Collects system metrics: CPU, memory, disk, network rx/tx packets & bytes,
+// conntrack session count, and systemd service states.
+prometheus.exporter.unix "router_node" {
+  procfs_path = "/proc"
+  sysfs_path  = "/sys"
+  rootfs_path = "/"
+
+  // Include interface metrics, conntrack, and systemd units
+  include_exporter_metrics = true
+}
+
+// Scrape local router node metrics every 15 seconds
+prometheus.scrape "router_metrics" {
+  targets    = prometheus.exporter.unix.router_node.targets
+  forward_to = [prometheus.remote_write.mimir_or_prometheus.receiver]
+  scrape_interval = "15s"
+
+  extra_metrics_labels = {
+    instance = "azureclaw-router",
+    job      = "node-exporter",
+  }
+}
+
+// Forward metrics to remote Prometheus / Mimir / Grafana Cloud
+prometheus.remote_write "mimir_or_prometheus" {
+  endpoint {
+    // Override this URL via Ansible or directly in this file
+    // Example: "http://192.168.1.100:9090/api/v1/write"
+    url = sys.env("PROMETHEUS_REMOTE_WRITE_URL")
+
+    // Uncomment if using basic auth:
+    // basic_auth {
+    //   username = sys.env("PROMETHEUS_USERNAME")
+    //   password = sys.env("PROMETHEUS_PASSWORD")
+    // }
+
+    queue_config {
+      capacity             = 5000
+      max_samples_per_send = 1000
+      batch_send_deadline  = "5s"
+    }
+  }
+}
+
+// -------------------------------------------------------------
+// 2. Systemd Journal Logs (loki.source.journal)
+// -------------------------------------------------------------
+// Collects router logs: dnsmasq leases/queries, nftables drops,
+// NetworkManager link changes, bootc upgrade staging, sshd logins.
+loki.source.journal "router_journal" {
+  max_age       = "12h"
+  path          = "/var/log/journal"
+  forward_to    = [loki.write.loki_endpoint.receiver]
+  relabel_rules = loki.relabel.journal_labels.rules
+}
+
+// Extract service unit labels for clean filtering in Grafana Loki
+loki.relabel "journal_labels" {
+  forward_to = [loki.write.loki_endpoint.receiver]
+
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+
+  rule {
+    source_labels = ["__journal_priority_keyword"]
+    target_label  = "level"
+  }
+
+  rule {
+    source_labels = ["__journal__hostname"]
+    target_label  = "nodename"
+  }
+}
+
+// Forward logs to Grafana Loki / Grafana Cloud
+loki.write "loki_endpoint" {
+  endpoint {
+    // Override this URL via Ansible or directly in this file
+    // Example: "http://192.168.1.100:3100/loki/api/v1/push"
+    url = sys.env("LOKI_PUSH_URL")
+
+    // Uncomment if using basic auth:
+    // basic_auth {
+    //   username = sys.env("LOKI_USERNAME")
+    //   password = sys.env("LOKI_PASSWORD")
+    // }
+  }
+}

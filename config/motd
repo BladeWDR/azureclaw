@@ -11,4 +11,5 @@
  * Firewall Ruleset:   nft list ruleset
  * DHCP / DNS Leases:  cat /var/lib/dnsmasq/dnsmasq.leases
  * Cockpit Console:    https://<LAN-IP>:9090
+ * Grafana Alloy:      http://<LAN-IP>:12345 (Metrics & Logs)
 ========================================================================

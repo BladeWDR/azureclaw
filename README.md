@@ -15,6 +15,7 @@ Azureclaw is a modern, lightweight, declarative alternative to traditional route
   - **DHCP & DNS**: `dnsmasq` for ultra-lightweight DHCP leases and caching DNS resolver with DNSSEC support.
   - **Interface Management**: `NetworkManager` with declarative keyfiles.
   - **Kernel Tuning**: BBR congestion control, fq_codel queueing, and hardened sysctls.
+- 📊 **Telemetry & Observability (Grafana Alloy)**: Built-in Grafana Alloy agent to collect router node metrics (CPU, RAM, conntrack, interface throughput) and forward systemd journal logs (dnsmasq, nftables drops, NetworkManager) to Prometheus/Mimir and Loki.
 - ⚙️ **GitOps & Ansible Ready**:
   - **GitOps**: Base OS, firewall, and packages version-controlled in Git and built via CI.
   - **Ansible**: Post-deployment site customization for dynamic reservations, WireGuard keys, and secrets in persistent `/etc`.
@@ -30,6 +31,7 @@ azureclaw/
 ├── README.md                          # Project documentation
 ├── Containerfile                      # Fedora bootc container definition
 ├── config/
+│   ├── alloy/                         # Grafana Alloy pipeline (metrics scraping & log forwarding)
 │   ├── sysctl.d/99-router.conf        # Network forwarding & kernel tuning
 │   ├── nftables/nftables.conf         # Stateful router firewall & NAT rules
 │   ├── dnsmasq/dnsmasq.conf           # DHCP server & DNS caching resolver
@@ -102,6 +104,7 @@ ansible-playbook -i inventory.ini playbook.yml
 | Instant rollback to previous OS | `bootc rollback && systemctl reboot` |
 | View active firewall ruleset | `nft list ruleset` |
 | View active DHCP leases | `cat /var/lib/dnsmasq/dnsmasq.leases` |
+| Grafana Alloy Web UI / Metrics | `http://192.168.1.1:12345` |
 | Cockpit Web Console | `https://192.168.1.1:9090` |
 
 ---
