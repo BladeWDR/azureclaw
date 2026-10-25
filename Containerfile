@@ -57,8 +57,7 @@ RUN systemctl disable systemd-resolved.service || true && \
     rm -f /etc/resolv.conf && \
     echo "nameserver 127.0.0.1" > /etc/resolv.conf && \
     echo "nameserver 1.1.1.1" >> /etc/resolv.conf && \
-    echo "azureclaw" > /etc/hostname && \
-    printf "127.0.0.1   localhost localhost.localdomain\n::1         localhost localhost.localdomain\n127.0.1.1   azureclaw.home.arpa azureclaw\n192.168.1.1 azureclaw.home.arpa azureclaw\n" > /etc/hosts
+    echo "azureclaw" > /etc/hostname
 
 # 3. Copy Custom Configuration Files
 COPY config/sysctl.d/99-router.conf /usr/lib/sysctl.d/99-router.conf
