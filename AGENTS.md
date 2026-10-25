@@ -29,6 +29,7 @@ This document provides system design, architectural decisions, and operational g
    - **Firewall & NAT**: Modern, declarative `nftables` (replaces legacy iptables).
    - **DHCPv4 / DHCPv6 & DNS**: `dnsmasq` for lightweight, ultra-reliable DHCP leases, local domain resolution, and DNS caching with DNSSEC/upstream forwarding.
    - **Interface Management**: `NetworkManager` with declarative keyfiles (`/etc/NetworkManager/system-connections/`).
+   - **VPN Subsystem**: `wireguard-tools` (userspace `wg` / `wg-quick`) and `tailscale` (daemon + CLI for mesh networking, exit node, and subnet routing).
    - **Virtualization & Telemetry**:
      - `qemu-guest-agent` for native Proxmox VE integration (shutdowns, IP reporting, backup freezes).
      - `alloy` (Grafana Alloy) for streaming host metrics (`node_exporter` via `prometheus.exporter.unix`) and systemd journal logs (`loki.source.journal`) to Prometheus, Mimir, and Loki.
@@ -39,6 +40,9 @@ This document provides system design, architectural decisions, and operational g
 
 ```
 azureclaw/
+├── .github/
+│   └── workflows/
+│       └── build.yml                  # Automated CI/CD (Container, Proxmox QCOW2, Baremetal ISO)
 ├── AGENTS.md                          # This file: architectural & agent guidelines
 ├── README.md                          # Quickstart & user documentation
 ├── Containerfile                      # Bootc container definition based on Fedora 41

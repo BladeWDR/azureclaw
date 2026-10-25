@@ -35,59 +35,14 @@ With `bootc`, the container image is the immutable source of truth for your oper
 
 ---
 
-## 1. Setting Up Automated Builds with GitHub Actions
+## 1. Automated Builds with GitHub Actions
 
-Create `.github/workflows/build-and-push.yml` in your repository:
-
-```yaml
-name: Build and Publish Router Image
-
-on:
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - 'docs/**'
-      - 'README.md'
-      - 'ansible/**'
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push container image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Containerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-```
+The repository includes a complete CI/CD workflow at [`.github/workflows/build.yml`](../.github/workflows/build.yml) that automatically:
+1. Builds the bootc container image and pushes it to GitHub Container Registry (`ghcr.io`).
+2. Runs `bootc-image-builder` to generate:
+   - **Proxmox / KVM VM disk** (`.qcow2.zst`)
+   - **Baremetal Installer ISO** (`.iso`)
+3. Computes SHA256 checksums and attaches them as workflow artifacts (and attaches them to GitHub Releases on version tags like `v1.0.0`).
 
 ---
 

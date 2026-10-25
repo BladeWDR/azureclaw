@@ -66,9 +66,17 @@ else
         "${IMAGE_REF}"
 fi
 
-echo "==> Disk generation completed!"
-echo "Disk image is located at: ${OUTPUT_DIR}/qcow2/disk.qcow2"
-echo ""
-echo "To import into Proxmox VE:"
-echo "1. Transfer disk.qcow2 to your Proxmox host (e.g. /var/lib/vz/template/iso/ or /tmp)"
-echo "2. Run: ./scripts/deploy-proxmox-vm.sh <VMID> <STORAGE_POOL> /path/to/disk.qcow2"
+echo "==> Build completed successfully!"
+echo "Generated artifacts in: ${OUTPUT_DIR}/"
+if [ "${DISK_TYPE}" = "qcow2" ]; then
+    echo "Disk image: ${OUTPUT_DIR}/qcow2/disk.qcow2"
+    echo ""
+    echo "To import into Proxmox VE:"
+    echo "1. Transfer disk.qcow2 to your Proxmox host (e.g. /var/lib/vz/template/iso/ or /tmp)"
+    echo "2. Run: ./scripts/deploy-proxmox-vm.sh <VMID> <STORAGE_POOL> /path/to/disk.qcow2"
+elif [ "${DISK_TYPE}" = "anaconda-iso" ]; then
+    echo "Installer ISO: ${OUTPUT_DIR}/bootiso/install.iso"
+    echo ""
+    echo "To flash to baremetal USB drive:"
+    echo "  sudo dd if=${OUTPUT_DIR}/bootiso/install.iso of=/dev/sdX bs=4M status=progress oflag=sync"
+fi

@@ -15,6 +15,7 @@ Azureclaw is a modern, lightweight, declarative alternative to traditional route
   - **DHCP & DNS**: `dnsmasq` for ultra-lightweight DHCP leases and caching DNS resolver with DNSSEC support.
   - **Interface Management**: `NetworkManager` with declarative keyfiles.
   - **Kernel Tuning**: BBR congestion control, fq_codel queueing, and hardened sysctls.
+  - **VPN & Remote Access**: `wireguard-tools` userspace utilities and `tailscale` (supports subnet routing and exit node modes).
 - 📊 **Telemetry & Observability (Grafana Alloy)**: Built-in Grafana Alloy agent to collect router node metrics (CPU, RAM, conntrack, interface throughput) and forward systemd journal logs (dnsmasq, nftables drops, NetworkManager) to Prometheus/Mimir and Loki.
 - ⚙️ **GitOps & Ansible Ready**:
   - **GitOps**: Base OS, firewall, and packages version-controlled in Git and built via CI.
@@ -27,6 +28,8 @@ Azureclaw is a modern, lightweight, declarative alternative to traditional route
 
 ```
 azureclaw/
+├── .github/
+│   └── workflows/build.yml            # CI/CD: Builds container, QCOW2 (VM), and ISO (Baremetal)
 ├── AGENTS.md                          # Architectural decisions & agent guidelines
 ├── README.md                          # Project documentation
 ├── Containerfile                      # Fedora bootc container definition
@@ -73,6 +76,20 @@ Copy the disk to your Proxmox host and run:
 ./scripts/deploy-proxmox-vm.sh <VMID> <STORAGE_POOL> /path/to/disk.qcow2
 ```
 *For detailed Proxmox isolated network setup and test client validation, see [docs/proxmox-setup.md](docs/proxmox-setup.md).*
+
+---
+
+## Baremetal Appliance Installation
+
+To build a bootable installer ISO for physical mini-PC appliances (e.g. Protectli, Intel N100):
+```bash
+DISK_TYPE=anaconda-iso ./scripts/build-disk.sh azureclaw:latest
+```
+Flash the generated installer to a USB drive:
+```bash
+sudo dd if=output/bootiso/install.iso of=/dev/sdX bs=4M status=progress oflag=sync
+```
+Boot the target appliance from the USB drive; the installer will automatically partition the internal NVMe/SSD drive and install the bootc deployment.
 
 ---
 

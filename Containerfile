@@ -5,19 +5,22 @@ LABEL org.opencontainers.image.title="azureclaw" \
       org.opencontainers.image.description="Immutable Linux Home Router built with Fedora and bootc" \
       org.opencontainers.image.source="https://github.com/BladeWDR/azureclaw"
 
-# 1. Add Grafana Official Repository for Alloy Telemetry Agent
+# 1. Add Third-Party Repositories (Grafana Alloy & Tailscale)
 RUN rpm --import https://rpm.grafana.com/gpg.key && \
-    printf "[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nrepo_gpgcheck=1\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt\n" > /etc/yum.repos.d/grafana.repo
+    printf "[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nrepo_gpgcheck=1\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt\n" > /etc/yum.repos.d/grafana.repo && \
+    curl -fsSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
-# 2. Install Router, Firewall, DNS/DHCP, Telemetry, and Management Packages
+# 2. Install Router, Firewall, DNS/DHCP, VPN, Telemetry, and Management Packages
 # We install cockpit for optional web GUI administration (similar to OPNsense),
-# qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs, and dnsmasq/nftables for core routing.
+# qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs,
+# wireguard-tools & tailscale for VPN, and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
         NetworkManager \
         NetworkManager-tui \
         nftables \
         dnsmasq \
         wireguard-tools \
+        tailscale \
         qemu-guest-agent \
         alloy \
         openssh-server \
@@ -80,6 +83,7 @@ RUN systemctl enable NetworkManager.service && \
     systemctl enable sshd.service && \
     systemctl enable cockpit.socket && \
     systemctl enable alloy.service && \
+    systemctl enable tailscaled.service && \
     systemctl enable bootc-auto-update.timer
 
 # Create placeholder admin user 'admin' (NOPASSWD sudo, user can set password/key via cloud-init/ansible)
