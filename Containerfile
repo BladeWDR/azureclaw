@@ -65,11 +65,13 @@ COPY config/systemd/bootc-auto-update.timer /usr/lib/systemd/system/bootc-auto-u
 COPY config/alloy/config.alloy /etc/alloy/config.alloy
 COPY config/alloy/alloy.sysconfig /etc/sysconfig/alloy
 COPY config/bootc/10-systemd-boot.toml /usr/lib/bootc/install/10-systemd-boot.toml
+COPY config/ssh/99-hardening.conf /etc/ssh/sshd_config.d/99-hardening.conf
 
 # 4. Secure File Permissions & Group Memberships
 # NetworkManager strictly requires 0600 on connection keyfiles
 # Alloy needs systemd-journal group membership to tail host journal logs
 RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
+    chmod 0600 /etc/ssh/sshd_config.d/99-hardening.conf && \
     chmod 0644 /etc/nftables/nftables.conf && \
     chmod 0644 /etc/dnsmasq.conf && \
     chmod 0644 /etc/alloy/config.alloy && \
@@ -77,7 +79,8 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/sysctl.d/99-router.conf && \
     chmod 0644 /usr/lib/systemd/system/bootc-auto-update.* && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
-    usermod -aG systemd-journal alloy || true
+    usermod -aG systemd-journal alloy || true && \
+    passwd -l root
 
 # 5. Enable Necessary System Services
 RUN systemctl enable NetworkManager.service && \

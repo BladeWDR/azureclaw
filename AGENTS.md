@@ -52,6 +52,8 @@ azureclaw/
 │   │   └── alloy.sysconfig            # Environment variables and listen port configuration
 │   ├── bootc/
 │   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (systemd-boot, DPS)
+│   ├── ssh/
+│   │   └── 99-hardening.conf          # Hardened SSH daemon config (keys only, modern ciphers)
 │   ├── sysctl.d/
 │   │   └── 99-router.conf             # Kernel network tuning (forwarding, conntrack, bbr)
 │   ├── nftables/
@@ -138,3 +140,28 @@ When modifying or expanding azureclaw:
    - Forwarding between subnets must default to drop unless explicitly permitted.
    - `net.ipv4.ip_forward` must remain enabled.
 4. **Document Proxmox Details**: Always maintain explicit Proxmox CLI (`qm`) commands alongside web GUI instructions.
+
+---
+
+## 6. Security Hardening Specifications
+
+Azureclaw enforces multi-layered defense-in-depth across the router stack:
+
+1. **Kernel Sysctls (`/usr/lib/sysctl.d/99-router.conf`)**:
+   - `net.ipv4.tcp_syncookies = 1` & `net.ipv4.tcp_rfc1337 = 1`: Defends against TCP SYN flooding and TIME-WAIT assassination attacks.
+   - `kernel.kptr_restrict = 2` & `kernel.dmesg_restrict = 1`: Hides kernel pointer addresses and prevents unprivileged log snooping.
+   - `kernel.unprivileged_bpf_disabled = 1` & `net.core.bpf_jit_harden = 2`: Closes unprivileged eBPF attack surface and hardens JIT compiler against spraying.
+   - `fs.suid_dumpable = 0` & `kernel.yama.ptrace_scope = 2`: Restricts core dumping and cross-process ptrace debugging.
+
+2. **Firewall Anomaly Protection (`/etc/nftables/nftables.conf`)**:
+   - State-tracking drops: Drops `ct state invalid` packets immediately.
+   - Port-scan mitigation: Automatically drops Xmas scans, Null scans, and illegal SYN combinations (`syn|fin`, `syn|rst`).
+   - Brute-force rate limiting: Meters SSH and management connections to 15/minute burst 5.
+
+3. **SSH Lockdown (`/etc/ssh/sshd_config.d/99-hardening.conf`)**:
+   - Public-key only: `PasswordAuthentication no`, `PermitEmptyPasswords no`.
+   - Root login disabled: `PermitRootLogin no` (root account password locked).
+   - Modern cryptography: Strict Curve25519, ChaCha20-Poly1305, and AES-GCM suites only.
+
+4. **DNS Rebinding Protection (`/etc/dnsmasq.conf`)**:
+   - `stop-dns-rebind`: Drops upstream answers resolving to private RFC 1918 or loopback addresses, preventing malicious websites from targeting internal IoT devices.

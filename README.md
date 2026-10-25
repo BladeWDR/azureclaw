@@ -37,6 +37,7 @@ azureclaw/
 ├── config/
 │   ├── alloy/                         # Grafana Alloy pipeline (metrics scraping & log forwarding)
 │   ├── bootc/                         # Declarative bootc installer config (systemd-boot & DPS)
+│   ├── ssh/                           # Hardened OpenSSH server configuration
 │   ├── sysctl.d/99-router.conf        # Network forwarding & kernel tuning
 │   ├── nftables/nftables.conf         # Stateful router firewall & NAT rules
 │   ├── dnsmasq/dnsmasq.conf           # DHCP server & DNS caching resolver
