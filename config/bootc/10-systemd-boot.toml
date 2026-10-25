@@ -1,0 +1,12 @@
+# /usr/lib/bootc/install/10-systemd-boot.toml
+# Declarative install configuration for Azureclaw
+
+[install]
+# Direct bootc to configure systemd-boot instead of GRUB
+bootloader = "systemd"
+
+# Enable Discoverable Partitions Specification (DPS) with BLI
+discoverable-partitions = true
+
+# Recommended filesystem for bootc appliance
+filesystem = "ext4"

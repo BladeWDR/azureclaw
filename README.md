@@ -8,7 +8,8 @@ Azureclaw is a modern, lightweight, declarative alternative to traditional route
 
 ## Key Features
 
-- 🛡️ **Immutable Operating System**: Read-only root filesystem via `bootc` and OSTree. Immune to accidental drift or runtime corruption.
+- 🛡️ **Immutable Operating System**: Read-only root filesystem via `bootc` and OSTree on **Fedora 44**. Immune to accidental drift or runtime corruption.
+- 🚀 **Blazing Fast UEFI Bootloader (`systemd-boot`)**: Native implementation of the Boot Loader Specification (BLS) and Discoverable Partitions Specification (DPS) with automatic boot-assessment rollback.
 - 🔄 **Autonomous Zero-Touch Updates**: Automatic image pulls and staged deployments with configurable maintenance windows and instant rollback.
 - ⚡ **Modern High-Performance Networking**:
   - **Firewall & NAT**: Declarative, high-speed `nftables` ruleset.
@@ -35,6 +36,7 @@ azureclaw/
 ├── Containerfile                      # Fedora bootc container definition
 ├── config/
 │   ├── alloy/                         # Grafana Alloy pipeline (metrics scraping & log forwarding)
+│   ├── bootc/                         # Declarative bootc installer config (systemd-boot & DPS)
 │   ├── sysctl.d/99-router.conf        # Network forwarding & kernel tuning
 │   ├── nftables/nftables.conf         # Stateful router firewall & NAT rules
 │   ├── dnsmasq/dnsmasq.conf           # DHCP server & DNS caching resolver

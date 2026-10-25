@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora-bootc:41
+FROM quay.io/fedora/fedora-bootc:44
 
 # Labels for OCI image tracking
 LABEL org.opencontainers.image.title="azureclaw" \
@@ -10,11 +10,13 @@ RUN rpm --import https://rpm.grafana.com/gpg.key && \
     printf "[grafana]\nname=grafana\nbaseurl=https://rpm.grafana.com\nrepo_gpgcheck=1\nenabled=1\ngpgcheck=1\ngpgkey=https://rpm.grafana.com/gpg.key\nsslverify=1\nsslcacert=/etc/pki/tls/certs/ca-bundle.crt\n" > /etc/yum.repos.d/grafana.repo && \
     curl -fsSL https://pkgs.tailscale.com/stable/fedora/tailscale.repo -o /etc/yum.repos.d/tailscale.repo
 
-# 2. Install Router, Firewall, DNS/DHCP, VPN, Telemetry, and Management Packages
-# We install cockpit for optional web GUI administration (similar to OPNsense),
+# 2. Install Router, Firewall, DNS/DHCP, VPN, Bootloader, Telemetry, and Management Packages
+# We install systemd-boot-unsigned for minimal fast UEFI booting,
+# cockpit for optional web GUI administration (similar to OPNsense),
 # qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs,
 # wireguard-tools & tailscale for VPN, and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
+        systemd-boot-unsigned \
         NetworkManager \
         NetworkManager-tui \
         nftables \
@@ -62,6 +64,7 @@ COPY config/systemd/bootc-auto-update.service /usr/lib/systemd/system/bootc-auto
 COPY config/systemd/bootc-auto-update.timer /usr/lib/systemd/system/bootc-auto-update.timer
 COPY config/alloy/config.alloy /etc/alloy/config.alloy
 COPY config/alloy/alloy.sysconfig /etc/sysconfig/alloy
+COPY config/bootc/10-systemd-boot.toml /usr/lib/bootc/install/10-systemd-boot.toml
 
 # 4. Secure File Permissions & Group Memberships
 # NetworkManager strictly requires 0600 on connection keyfiles
@@ -73,6 +76,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /etc/sysconfig/alloy && \
     chmod 0644 /usr/lib/sysctl.d/99-router.conf && \
     chmod 0644 /usr/lib/systemd/system/bootc-auto-update.* && \
+    chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
     usermod -aG systemd-journal alloy || true
 
 # 5. Enable Necessary System Services

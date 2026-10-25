@@ -45,11 +45,13 @@ azureclaw/
 │       └── build.yml                  # Automated CI/CD (Container, Proxmox QCOW2, Baremetal ISO)
 ├── AGENTS.md                          # This file: architectural & agent guidelines
 ├── README.md                          # Quickstart & user documentation
-├── Containerfile                      # Bootc container definition based on Fedora 41
+├── Containerfile                      # Bootc container definition based on Fedora 44
 ├── config/
 │   ├── alloy/
 │   │   ├── config.alloy               # Grafana Alloy pipeline (metrics scraping & log forwarding)
 │   │   └── alloy.sysconfig            # Environment variables and listen port configuration
+│   ├── bootc/
+│   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (systemd-boot, DPS)
 │   ├── sysctl.d/
 │   │   └── 99-router.conf             # Kernel network tuning (forwarding, conntrack, bbr)
 │   ├── nftables/
