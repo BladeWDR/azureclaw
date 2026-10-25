@@ -26,6 +26,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         wireguard-tools \
         tailscale \
         qemu-guest-agent \
+        cloud-init \
         alloy \
         openssh-server \
         cockpit-bridge \
@@ -95,8 +96,22 @@ RUN systemctl enable NetworkManager.service && \
     systemctl enable tailscaled.service && \
     systemctl enable bootc-auto-update.timer
 
-# Create placeholder admin user 'admin' (NOPASSWD sudo, user can set password/key via cloud-init/ansible)
-# Default login via SSH keys or Proxmox console
+# 6. Admin User Provisioning
+# - Initial console password is set to 'azureclaw' (forced to change on first login via chage)
+# - Note: SSH password login is disabled by policy; this password only works on the physical/Proxmox console
+# - If config/ssh/authorized_keys is provided at build time, it will be baked in automatically.
 RUN useradd -m -s /bin/bash -G wheel admin && \
+    echo "admin:azureclaw" | chpasswd && \
+    chage -d 0 admin && \
     echo "%wheel ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/wheel-nopasswd && \
-    chmod 0440 /etc/sudoers.d/wheel-nopasswd
+    chmod 0440 /etc/sudoers.d/wheel-nopasswd && \
+    mkdir -p /home/admin/.ssh && \
+    chmod 0700 /home/admin/.ssh && \
+    chown -R admin:admin /home/admin/.ssh
+
+COPY config/ssh/authorized_keys* /tmp/ssh_keys/
+RUN if [ -f /tmp/ssh_keys/authorized_keys ]; then \
+        cp /tmp/ssh_keys/authorized_keys /home/admin/.ssh/authorized_keys && \
+        chmod 0600 /home/admin/.ssh/authorized_keys && \
+        chown admin:admin /home/admin/.ssh/authorized_keys ; \
+    fi && rm -rf /tmp/ssh_keys

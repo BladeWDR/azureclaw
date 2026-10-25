@@ -143,14 +143,57 @@ Create or reconfigure an existing client VM (e.g., Ubuntu Desktop, Alpine Linux,
    curl -I https://www.google.com
    ```
 
-### 3. Access Management Interfaces from Test Client
-From the client VM connected to `vmbr1`:
-- **SSH**: `ssh admin@192.168.1.1`
-- **Cockpit Web UI**: Open browser to `https://192.168.1.1:9090` (Login with `admin` account).
+### 3. First-Time Router Login
+
+There are three ways to access the router initially:
+
+#### Method A: Proxmox Web Console (NoVNC / Terminal)
+1. Open VM `900` -> **Console** in Proxmox.
+2. At the login prompt:
+   - **Username**: `admin`
+   - **Password**: `azureclaw`
+3. Because the initial password is expired by default, the system will immediately prompt you to set your new permanent password.
+4. *(Note: Because SSH password authentication is disabled by security policy, the password `azureclaw` only functions on the physical/hypervisor console).*
+
+#### Method B: Bake Your SSH Key into the Image Build
+Before building the container image, copy your workstation's public key:
+```bash
+cp ~/.ssh/id_ed25519.pub config/ssh/authorized_keys
+```
+Rebuild and launch. You can then immediately SSH in from the LAN or test client without passwords:
+```bash
+ssh admin@192.168.1.1
+```
+
+#### Method C: Proxmox Cloud-Init Drive
+In the Proxmox Web GUI:
+1. VM `900` -> **Hardware** -> **Add** -> **Cloud-Init Drive**.
+2. Go to VM `900` -> **Cloud-Init**.
+3. Set **User**: `admin`, paste your **SSH Public Key**, and click **Regenerate Image**.
 
 ---
 
-## 5. Testing Atomic Updates & Rollback
+### 4. Creating Your Personalized User Account
+
+Once logged into Azureclaw as `admin`:
+```bash
+# Create your own user account with sudo privileges
+sudo useradd -m -s /bin/bash -G wheel <yourusername>
+sudo passwd <yourusername>
+
+# Add your SSH public key
+sudo mkdir -p /home/<yourusername>/.ssh
+sudo chmod 0700 /home/<yourusername>/.ssh
+echo "ssh-ed25519 AAAAC3... user@host" | sudo tee /home/<yourusername>/.ssh/authorized_keys
+sudo chmod 0600 /home/<yourusername>/.ssh/authorized_keys
+sudo chown -R <yourusername>:<yourusername> /home/<yourusername>/.ssh
+```
+
+*(Or use the provided Ansible playbook to manage users automatically).*
+
+---
+
+### 5. Testing & Verification Steps
 
 ### Testing Staged Updates:
 On the router:
