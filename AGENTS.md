@@ -6,7 +6,7 @@ This document provides system design, architectural decisions, and operational g
 
 ## 1. System Overview
 
-`azureclaw` is an immutable, container-native home router built on Fedora using **bootc** (bootable containers). It is designed as a modern, lightweight, declarative alternative to monolithic router appliances like OPNsense or pfSense.
+`azureclaw` is an immutable, container-native router built on Fedora using **bootc** (bootable containers). It is designed as a modern, lightweight, declarative alternative to monolithic router appliances like OPNsense or pfSense.
 
 ### Core Architecture Principles
 

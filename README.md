@@ -1,6 +1,6 @@
 # Azureclaw 🦀
 
-> **Immutable, Container-Native Linux Home Router built with Fedora & bootc**
+> **Immutable, Container-Native Linux Router built with Fedora & bootc**
 
 Azureclaw is a modern, lightweight, declarative alternative to traditional router appliances (like OPNsense and pfSense). Built on top of **Fedora bootc**, Azureclaw combines the atomic update capabilities of containers with production Linux networking primitives.
 

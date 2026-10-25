@@ -1,15 +1,15 @@
 # Testing Azureclaw on Proxmox VE
 
-This guide walks you through setting up an isolated virtual test environment on Proxmox VE to validate Azureclaw as your home router before bare-metal or production deployment.
+This guide walks you through setting up an isolated virtual test environment on Proxmox VE to validate Azureclaw as your router before bare-metal or production deployment.
 
 ---
 
 ## 1. Proxmox Network Architecture
 
-To test a router VM safely without creating DHCP conflicts or IP loops on your existing home network, create an isolated bridge for the LAN:
+To test a router VM safely without creating DHCP conflicts or IP loops on your existing network, create an isolated bridge for the LAN:
 
 ```
-[ Your Physical LAN / Home Router ]
+[ Your Physical LAN / Upstream Gateway ]
                  │
            [ vmbr0 ] (Proxmox WAN Bridge)
                  │  (DHCP or Static IP from your home network)
@@ -121,7 +121,7 @@ qm start $VMID
 In the Proxmox Web GUI:
 - Open VM `900` -> **Summary**.
 - Within 15–30 seconds, `qemu-guest-agent` will report both IP addresses:
-  - `net0` (WAN): IP received from your existing home network.
+  - `net0` (WAN): IP received from your existing network.
   - `net1` (LAN): `192.168.1.1/24`.
 
 ### 2. Connect a Test Client to `vmbr1`

@@ -11,7 +11,7 @@ if grep -q "First-Boot Random Credential" /etc/issue /etc/issue.d/10-azureclaw.i
   / _` |_  / | | | '__/ _ \/ __| |/ _` \ \ /\ / /
  | (_| |/ /| |_| | | |  __/ (__| | (_| |\ V  V / 
   \__,_/___|\__,_|_|  \___|\___|_|\__,_| \_/\_/  
-         Immutable Home Router (bootc / Fedora)
+         Immutable Router (bootc / Fedora)
 ========================================================================
 
 \S

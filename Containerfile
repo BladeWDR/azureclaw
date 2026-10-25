@@ -2,7 +2,7 @@ FROM quay.io/fedora/fedora-bootc:44
 
 # Labels for OCI image tracking
 LABEL org.opencontainers.image.title="azureclaw" \
-      org.opencontainers.image.description="Immutable Linux Home Router built with Fedora and bootc" \
+      org.opencontainers.image.description="Immutable Linux Router built with Fedora and bootc" \
       org.opencontainers.image.source="https://github.com/BladeWDR/azureclaw"
 
 # 1. Add Third-Party Repositories (Grafana Alloy & Tailscale)
