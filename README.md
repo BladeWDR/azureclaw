@@ -136,6 +136,7 @@ ansible-playbook -i inventory.ini playbook.yml
 ## Documentation
 
 - [Proxmox VE Setup Guide](docs/proxmox-setup.md)
+- [VLAN Configuration & Network Segmentation](docs/vlan-configuration.md)
 - [GitOps Pipeline Guide](docs/gitops-workflow.md)
 - [Bare-Metal Secure Boot with sbctl](docs/secure-boot-sbctl.md)
 - [Troubleshooting & Rollback](docs/troubleshooting.md)

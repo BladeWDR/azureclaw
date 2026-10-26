@@ -81,6 +81,7 @@ azureclaw/
 │   └── deploy-proxmox-vm.sh           # Proxmox VE helper (qm commands)
 └── docs/
     ├── proxmox-setup.md               # Step-by-step Proxmox VE testing & deployment guide
+    ├── vlan-configuration.md          # 802.1Q VLAN setup, DHCP/DNS, and isolation firewall rules
     ├── gitops-workflow.md             # Automated CI/CD updates & registry setup
     ├── secure-boot-sbctl.md           # Bare-metal Secure Boot configuration with sbctl
     └── troubleshooting.md             # Diagnostics, rollback, and recovery procedures
