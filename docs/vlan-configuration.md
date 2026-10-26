@@ -85,36 +85,32 @@ ip -br addr show dev ens19.100
 
 ## 3. Step 2: Configure DHCP and DNS in Dnsmasq
 
-Edit `/etc/dnsmasq.conf`:
+Azureclaw supports modular configuration snippets via `/etc/dnsmasq.d/*.conf`. Rather than editing the main `/etc/dnsmasq.conf` file, create a dedicated snippet for the VLAN:
 
 ```bash
-sudo nano /etc/dnsmasq.conf
+sudo nano /etc/dnsmasq.d/10-vlan100.conf
 ```
 
-### 1. Bind Dnsmasq to the VLAN IP
-Add the new VLAN gateway IP to `listen-address`:
+Add the following configuration:
 ```ini
-listen-address=127.0.0.1
-listen-address=::1
-listen-address=192.168.1.1
+# /etc/dnsmasq.d/10-vlan100.conf
+# 1. Bind Dnsmasq to the VLAN Gateway IP
 listen-address=10.0.100.1
-```
 
-### 2. Define the DHCP Pool & Gateway Options
-Add the DHCP range and routing options for VLAN 100:
-```ini
-# DHCP Pool for VLAN 100 (IoT / Guest Network)
+# 2. DHCP Pool for VLAN 100 (10.0.100.50 - 10.0.100.200)
 dhcp-range=set:vlan100,10.0.100.50,10.0.100.200,255.255.255.0,24h
+
+# 3. Gateway and DNS Options for VLAN 100
 dhcp-option=tag:vlan100,option:router,10.0.100.1
 dhcp-option=tag:vlan100,option:dns-server,10.0.100.1
 ```
 
-### 3. Restart Dnsmasq
+### Restart Dnsmasq
 ```bash
 sudo systemctl restart dnsmasq
 ```
 
-Verify `dnsmasq` is running without syntax errors:
+Verify `dnsmasq` loaded the snippet without syntax errors:
 ```bash
 sudo systemctl status dnsmasq
 ```

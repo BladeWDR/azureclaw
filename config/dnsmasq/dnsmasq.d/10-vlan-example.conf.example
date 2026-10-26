@@ -1,0 +1,17 @@
+# /etc/dnsmasq.d/10-vlan-example.conf.example
+# Example modular snippet for adding a dedicated VLAN DHCP & DNS pool
+# To use: copy or rename to 10-vlan100.conf and restart dnsmasq:
+#   sudo systemctl restart dnsmasq
+
+# 1. Bind Dnsmasq to the VLAN Gateway IP
+listen-address=10.0.100.1
+
+# 2. DHCP Pool for VLAN 100 (10.0.100.50 - 10.0.100.200)
+dhcp-range=set:vlan100,10.0.100.50,10.0.100.200,255.255.255.0,24h
+
+# 3. DHCP Options
+# Option 3: Default Gateway (Point to router's VLAN IP)
+dhcp-option=tag:vlan100,option:router,10.0.100.1
+
+# Option 6: DNS Resolver (Point to router's VLAN IP)
+dhcp-option=tag:vlan100,option:dns-server,10.0.100.1
