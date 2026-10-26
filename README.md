@@ -16,7 +16,10 @@ Azureclaw is a modern, lightweight, declarative alternative to traditional route
   - **DHCP & DNS**: `dnsmasq` for ultra-lightweight DHCP leases and caching DNS resolver with DNSSEC support.
   - **Interface Management**: `NetworkManager` with declarative keyfiles.
   - **Kernel Tuning**: BBR congestion control, fq_codel queueing, and hardened sysctls.
-  - **VPN & Remote Access**: `wireguard-tools` userspace utilities and `tailscale` (supports subnet routing and exit node modes).
+  - **VPN & Remote Access**:
+    - **WireGuard & Tailscale**: High-speed mesh networking, exit node, and subnet routing.
+    - **IPsec & L2TP**: `strongswan` for site-to-site tunnels and `xl2tpd` / `NetworkManager-l2tp` for corporate remote access.
+    - **OpenVPN**: `openvpn` client with `NetworkManager-openvpn` integration for easy `.ovpn` configuration import.
 - 📊 **Telemetry & Observability (Grafana Alloy)**: Built-in Grafana Alloy agent to collect router node metrics (CPU, RAM, conntrack, interface throughput) and forward systemd journal logs (dnsmasq, nftables drops, NetworkManager) to Prometheus/Mimir and Loki.
 - ⚙️ **GitOps & Ansible Ready**:
   - **GitOps**: Base OS, firewall, and packages version-controlled in Git and built via CI.
