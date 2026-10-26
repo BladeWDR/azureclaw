@@ -21,9 +21,11 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         sbsigntools \
         NetworkManager \
         NetworkManager-tui \
+        NetworkManager-libnm \
         NetworkManager-openvpn \
         NetworkManager-l2tp \
         NetworkManager-strongswan \
+        python3-gobject-base \
         nftables \
         dnsmasq \
         wireguard-tools \
