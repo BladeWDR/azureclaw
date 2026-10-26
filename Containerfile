@@ -111,6 +111,9 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     echo "session optional pam_exec.so seteuid /usr/libexec/azureclaw/firstboot-cleanup.sh" >> /etc/pam.d/postlogin && \
     mkdir -p /var/lib/alloy && \
     chown -R alloy:alloy /var/lib/alloy && \
+    chown -R alloy:alloy /etc/alloy && \
+    chmod 0755 /etc/alloy && \
+    chmod 0644 /etc/alloy/config.alloy && \
     usermod -aG systemd-journal alloy || true && \
     passwd -l root
 
