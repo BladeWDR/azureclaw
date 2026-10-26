@@ -79,6 +79,8 @@ COPY config/alloy/alloy.sysconfig /etc/sysconfig/alloy
 COPY config/bootc/10-systemd-boot.toml /usr/lib/bootc/install/10-systemd-boot.toml
 COPY config/ssh/99-hardening.conf /etc/ssh/sshd_config.d/99-hardening.conf
 COPY config/systemd/azureclaw-firstboot.service /usr/lib/systemd/system/azureclaw-firstboot.service
+COPY config/systemd/alloy.service.d/10-permissions.conf /usr/lib/systemd/system/alloy.service.d/10-permissions.conf
+COPY config/systemd/tmpfiles-alloy.conf /usr/lib/tmpfiles.d/alloy.conf
 COPY scripts/firstboot-cleanup.sh /usr/libexec/azureclaw/firstboot-cleanup.sh
 COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
@@ -98,6 +100,8 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/sysctl.d/99-router.conf && \
     chmod 0644 /usr/lib/systemd/system/bootc-auto-update.* && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-firstboot.service && \
+    chmod 0644 /usr/lib/systemd/system/alloy.service.d/10-permissions.conf && \
+    chmod 0644 /usr/lib/tmpfiles.d/alloy.conf && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
     chmod 0755 /usr/libexec/azureclaw/firstboot-cleanup.sh && \
     chmod 0755 /usr/libexec/azureclaw/router-status.sh && \
