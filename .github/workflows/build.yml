@@ -10,6 +10,11 @@ on:
       - main
     tags:
       - 'v*'
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
   workflow_dispatch:
     inputs:
       build_baremetal_iso:
