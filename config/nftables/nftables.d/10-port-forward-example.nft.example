@@ -1,0 +1,18 @@
+# /etc/nftables.d/10-port-forward-example.nft.example
+# Example modular snippet for port forwarding (DNAT) and firewall access
+# To use: copy or rename to /etc/nftables.d/99-port-forwards.nft and reload:
+#   sudo systemctl restart nftables
+
+table ip nat {
+    chain prerouting {
+        # Forward external WAN port 8443 to internal host 192.168.1.100 port 443
+        # iifname $WAN_IFACES tcp dport 8443 dnat to 192.168.1.100:443
+    }
+}
+
+table inet router {
+    chain forward {
+        # Allow forwarded traffic through the firewall to the destination host
+        # ip daddr 192.168.1.100 tcp dport 443 ct state new accept
+    }
+}
