@@ -14,7 +14,7 @@ Azureclaw is an immutable, container-native Linux router built on Fedora using *
 | **Routing & Firewall** | Linux Kernel & `nftables` | Packet forwarding (`ip_forward=1`), NAT masquerading, and a zero-WAN-exposure stealth firewall. |
 | **DHCP & DNS** | `dnsmasq` | Lightweight DHCP server and caching DNS resolver with modular snippet support (`/etc/dnsmasq.d/`). |
 | **Network Management** | `NetworkManager` | Declarative connection keyfiles in `/etc/NetworkManager/system-connections/`. |
-| **VPN Support** | WireGuard, Tailscale, IPsec, OpenVPN | `wireguard-tools`, `tailscale`, `strongswan`, `NetworkManager-l2tp` (backed by `go-l2tp`), and `openvpn`. |
+| **VPN Support** | WireGuard, Tailscale, IPsec | `wireguard-tools`, `tailscale`, `strongswan`, `NetworkManager-l2tp` (backed by `go-l2tp`) |
 | **Telemetry & Metrics** | Grafana Alloy | Streams host node metrics and journald logs to Prometheus, Mimir, and Loki. |
 | **Management** | SSH & Cockpit | Public-key OpenSSH, interactive login interface monitor, and optional Cockpit web console. |
 
