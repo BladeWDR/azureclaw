@@ -82,6 +82,9 @@ COPY config/ssh/99-hardening.conf /etc/ssh/sshd_config.d/99-hardening.conf
 COPY config/systemd/azureclaw-firstboot.service /usr/lib/systemd/system/azureclaw-firstboot.service
 COPY scripts/firstboot-cleanup.sh /usr/libexec/azureclaw/firstboot-cleanup.sh
 COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
+COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
+COPY config/profile.d/99-azureclaw-status.sh /etc/profile.d/99-azureclaw-status.sh
+COPY config/network/99-azureclaw-issue.sh /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh
 
 # 4. Secure File Permissions & Group Memberships
 # NetworkManager strictly requires 0600 on connection keyfiles
@@ -98,6 +101,9 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-firstboot.service && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
     chmod 0755 /usr/libexec/azureclaw/firstboot-cleanup.sh && \
+    chmod 0755 /usr/libexec/azureclaw/router-status.sh && \
+    chmod 0644 /etc/profile.d/99-azureclaw-status.sh && \
+    chmod 0755 /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
     echo "session optional pam_exec.so seteuid /usr/libexec/azureclaw/firstboot-cleanup.sh" >> /etc/pam.d/postlogin && \
     mkdir -p /var/lib/alloy && \
