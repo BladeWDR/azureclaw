@@ -99,17 +99,18 @@ In a virtualized (Proxmox) or bare-metal environment, the router expects two pri
 
 ### Firewall (nftables) Ruleset Architecture
 
-The firewall ruleset uses standard nftables `inet` family:
+The firewall ruleset uses standard nftables `inet` family with a strict **Zero-WAN-Exposure (Full Stealth)** posture:
 - **`input` chain**:
-  - Drops all unsolicited inbound traffic from WAN.
-  - Allows established/related traffic.
-  - Allows ICMP/ICMPv6 (with rate limiting) for MTU path discovery and connectivity checks.
-  - Allows SSH (`22`), Cockpit (`9090`), and Grafana Alloy (`12345`) ONLY from LAN interfaces (rate-limited).
-  - Allows DNS (`53`) and DHCP (`67/udp`) from LAN.
+  - **Zero Open WAN Ports**: **NO ports or protocols are EVER opened to the WAN by default.** All unsolicited inbound traffic from WAN is silently dropped.
+  - WAN ping (`echo-request`) is dropped by default to prevent internet-wide scanning and fingerprinting.
+  - Only essential ICMP/ICMPv6 network signaling (Path MTU discovery `packet-too-big` / `destination-unreachable`, IPv6 Neighbor Discovery) and stateful `established,related` return packets are accepted from WAN.
+  - Outbound VPN clients (Tailscale, WireGuard, OpenVPN, StrongSwan IPsec, L2TP) rely strictly on stateful connection tracking (`ct state established,related accept`). Users must explicitly configure and open ports if they wish to host inbound server daemons.
+  - Management services (SSH `22`, Cockpit `9090`, Grafana Alloy `12345`) are permitted ONLY from LAN and authenticated VPN interfaces (rate-limited).
+  - Router services (DNS `53`, DHCP `67/udp`) are permitted ONLY from LAN interfaces.
 - **`forward` chain**:
   - Allows LAN -> WAN egress.
   - Allows established/related WAN -> LAN return traffic.
-  - Blocks unsolicited WAN -> LAN incoming connections unless explicitly forwarded.
+  - Blocks unsolicited WAN -> LAN incoming connections unless explicitly forwarded by user rules.
 - **`postrouting` (NAT) chain**:
   - Applies `masquerade` on WAN egress for IPv4.
 
@@ -140,7 +141,9 @@ When modifying or expanding azureclaw:
 1. **Preserve Immutability**: Do not write instructions that rely on mutable `/usr` or runtime package installations (`dnf install` at runtime will fail in bootc). All packages must be installed in `Containerfile`.
 2. **Keep Networking Deterministic**: Avoid interface name hardcoding when possible. Use NetworkManager connection match rules (e.g. matching `interface-name=enp*` or MAC address) or standard predictable names (`eth0`, `eth1`).
 3. **Verify Security Invariants**:
-   - Inbound SSH must **never** be opened to the WAN interface by default.
+   - **Zero WAN Exposure Rule**: **NO ports should EVER be opened to the WAN by default.** This includes SSH, Web consoles, monitoring endpoints, and all VPN ports (WireGuard `51820`, Tailscale `41641`, IPsec `500`/`4500`, L2TP `1701`, etc.). All VPNs must operate as clients via stateful conntrack unless the administrator explicitly configures an inbound listener.
+   - Inbound SSH and management tools must **never** be exposed to the WAN interface.
+   - Inbound WAN ping (`echo-request`) must remain dropped by default for total stealth.
    - Forwarding between subnets must default to drop unless explicitly permitted.
    - `net.ipv4.ip_forward` must remain enabled.
 4. **Document Proxmox Details**: Always maintain explicit Proxmox CLI (`qm`) commands alongside web GUI instructions.
@@ -158,6 +161,7 @@ Azureclaw enforces multi-layered defense-in-depth across the router stack:
    - `fs.suid_dumpable = 0` & `kernel.yama.ptrace_scope = 2`: Restricts core dumping and cross-process ptrace debugging.
 
 2. **Firewall Anomaly Protection (`/etc/nftables/nftables.conf`)**:
+   - Zero WAN Exposure: Zero open ports or unsolicited protocols on WAN by default; WAN ping dropped for 100% stealth.
    - State-tracking drops: Drops `ct state invalid` packets immediately.
    - Port-scan mitigation: Automatically drops Xmas scans, Null scans, and illegal SYN combinations (`syn|fin`, `syn|rst`).
    - Brute-force rate limiting: Meters SSH and management connections to 15/minute burst 5.
