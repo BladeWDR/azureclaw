@@ -4,6 +4,8 @@
 
 Azureclaw is an immutable, container-native Linux router built on Fedora using **bootc**. It packages the operating system, kernel tunables, firewall, and routing services into an OCI container image. Updates are applied as atomic image deployments with rollback support, and site-specific configuration can be managed declaratively or via Ansible.
 
+This project is not in any way affiliated with Microsoft or Microsoft Azure.
+
 ---
 
 ## Architecture & Components
