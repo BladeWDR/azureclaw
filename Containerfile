@@ -16,7 +16,7 @@ RUN rpm --import https://rpm.grafana.com/gpg.key && \
 # We install sbsigntools for EFI verification and signing,
 # cockpit for optional web GUI administration (similar to OPNsense),
 # qemu-guest-agent for native Proxmox VE telemetry, alloy for metrics & logs,
-# VPN tools (wireguard, tailscale, openvpn, strongswan, xl2tpd), and dnsmasq/nftables for core routing.
+# VPN tools (wireguard, tailscale, openvpn, strongswan, NetworkManager-l2tp), and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
         sbsigntools \
         NetworkManager \
@@ -30,7 +30,6 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         tailscale \
         openvpn \
         strongswan \
-        xl2tpd \
         qemu-guest-agent \
         cloud-init \
         alloy \

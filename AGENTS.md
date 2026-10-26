@@ -31,7 +31,7 @@ This document provides system design, architectural decisions, and operational g
    - **Interface Management**: `NetworkManager` with declarative keyfiles (`/etc/NetworkManager/system-connections/`).
    - **VPN Subsystem**:
      - `wireguard-tools` (`wg` / `wg-quick`) and `tailscale` (daemon + CLI for mesh networking, exit node, and subnet routing).
-     - `strongswan` (IKEv1/IKEv2 IPsec for site-to-site) and `xl2tpd` / `NetworkManager-l2tp` (L2TP/IPsec client).
+     - `strongswan` (IKEv1/IKEv2 IPsec for site-to-site) and `NetworkManager-l2tp` (L2TP/IPsec client backed by `go-l2tp`).
      - `openvpn` and `NetworkManager-openvpn` (OpenVPN client with Cockpit/NetworkManager import).
    - **Virtualization & Telemetry**:
      - `qemu-guest-agent` for native Proxmox VE integration (shutdowns, IP reporting, backup freezes).
