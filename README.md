@@ -6,6 +6,8 @@ Azureclaw is a modern, lightweight, declarative alternative to traditional route
 
 ---
 
+[![Build](https://github.com/BladeWDR/azureclaw/actions/workflows/build.yml/badge.svg)](https://github.com/BladeWDR/azureclaw/actions/workflows/build.yml)
+
 ## Key Features
 
 - 🛡️ **Immutable Operating System**: Read-only root filesystem via `bootc` and OSTree on **Fedora 44**. Immune to accidental drift or runtime corruption.
