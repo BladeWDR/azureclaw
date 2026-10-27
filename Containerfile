@@ -47,6 +47,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         tcpdump \
         bind-utils \
         iputils \
+        ndisc6 \
         iperf3 \
         rsync \
         tmux \
