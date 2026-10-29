@@ -48,10 +48,13 @@ if [ "${ENGINE}" = "podman" ]; then
         --rm \
         --privileged \
         --security-opt label=type:unconfined_t \
+        --security-opt apparmor=unconfined \
+        -v /dev:/dev \
         -v /var/lib/containers/storage:/var/lib/containers/storage \
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
+        --local \
         "${IMAGE_REF}"
     sudo chown -R "$(id -u):$(id -g)" "${OUTPUT_DIR}"
 else
@@ -60,10 +63,13 @@ else
     sudo docker run \
         --rm \
         --privileged \
+        --security-opt apparmor=unconfined \
+        -v /dev:/dev \
         -v /var/lib/containers/storage:/var/lib/containers/storage \
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
+        --local \
         "${IMAGE_REF}"
     sudo chown -R "$(id -u):$(id -g)" "${OUTPUT_DIR}"
 fi
