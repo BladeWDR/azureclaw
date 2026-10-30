@@ -440,24 +440,58 @@ function updateStatusPill(elementId, isActive) {
 // Network Interfaces
 // ============================================================================
 function loadInterfaces() {
-  cockpit.spawn(["ip", "-j", "addr"])
+  const ipPromise = cockpit.spawn(["ip", "-j", "addr"])
     .then(jsonText => {
-      let data = [];
-      try { data = JSON.parse(jsonText); } catch(e) { return; }
+      try { return JSON.parse(jsonText); } catch(e) { return []; }
+    })
+    .catch(() => []);
 
+  const nmPromise = cockpit.spawn(["nmcli", "-t", "-f", "DEVICE,CONNECTION", "device"])
+    .then(text => {
+      const map = {};
+      text.split("\n").forEach(line => {
+        const parts = line.split(":");
+        if (parts.length >= 2 && parts[0] && parts[1] && parts[1] !== "--") {
+          map[parts[0].trim()] = parts[1].trim();
+        }
+      });
+      return map;
+    })
+    .catch(() => ({}));
+
+  Promise.all([ipPromise, nmPromise])
+    .then(([data, nmMap]) => {
       const tbody = document.getElementById("table-interfaces-body");
       tbody.innerHTML = "";
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No network interfaces found.</td></tr>`;
+        return;
+      }
 
       data.forEach(iface => {
         if (!iface.ifname || iface.ifname === "lo" || iface.ifname.startsWith("veth") || iface.ifname.startsWith("br-")) {
           return;
         }
 
-        let role = "Other";
-        if (["eth0", "ens18", "enp1s0"].includes(iface.ifname)) role = "WAN (Uplink)";
-        else if (["eth1", "ens19", "enp2s0"].includes(iface.ifname)) role = "LAN (Primary)";
-        else if (iface.ifname.includes(".")) role = "VLAN Subnet";
-        else if (iface.ifname.startsWith("tailscale") || iface.ifname.startsWith("wg")) role = "VPN Overlay";
+        // Clean interface name (strip any @parent suffix, e.g. VLAN100@ens19 -> VLAN100)
+        const cleanDev = iface.ifname.split("@")[0];
+
+        // 1. Resolve Role from NetworkManager connection profile name (e.g. WAN, LAN, Trusted, DMZ)
+        let role = nmMap[cleanDev] || nmMap[iface.ifname];
+
+        // 2. Fallback heuristics if NetworkManager profile name is unavailable
+        if (!role || role === "--") {
+          const lower = cleanDev.toLowerCase();
+          if (["eth0", "ens18", "enp1s0"].includes(cleanDev)) role = "WAN";
+          else if (["eth1", "ens19", "enp2s0"].includes(cleanDev)) role = "LAN";
+          else if (lower.includes("vlan") || cleanDev.includes(".")) role = "VLAN";
+          else if (lower.startsWith("tailscale")) role = "Tailscale";
+          else if (lower.startsWith("wg")) role = "WireGuard";
+          else if (lower.startsWith("tun") || lower.startsWith("tap")) role = "OpenVPN";
+          else if (lower.startsWith("ppp") || lower.startsWith("ipsec") || lower.startsWith("xfrm")) role = "IPsec/L2TP";
+          else role = "Other";
+        }
 
         const ips = (iface.addr_info || [])
           .map(a => `${escapeHtml(a.local)}/${escapeHtml(String(a.prefixlen))}`)
@@ -468,7 +502,7 @@ function loadInterfaces() {
 
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td><strong>${escapeHtml(iface.ifname)}</strong></td>
+          <td><strong>${escapeHtml(cleanDev)}</strong></td>
           <td>${escapeHtml(role)}</td>
           <td><span class="status-pill ${stateClass}">${escapeHtml(iface.operstate || "UNKNOWN")}</span></td>
           <td><code>${ips}</code></td>
