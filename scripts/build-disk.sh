@@ -45,7 +45,6 @@ BUILDER_IMAGE="quay.io/centos-bootc/bootc-image-builder:latest"
 echo "==> Running bootc-image-builder container..."
 if [ "${ENGINE}" = "podman" ]; then
     sudo podman run \
-        --rm \
         --privileged \
         --security-opt label=type:unconfined_t \
         --security-opt apparmor=unconfined \
@@ -61,7 +60,6 @@ else
     # Docker mode
     # Note: bootc-image-builder requires /var/lib/containers/storage.
     sudo docker run \
-        --rm \
         --privileged \
         --security-opt apparmor=unconfined \
         -v /dev:/dev \

@@ -114,7 +114,6 @@ jobs:
         run: |
           mkdir -p output/qcow2_build
           sudo podman run \
-            --rm \
             --privileged \
             --security-opt label=type:unconfined_t \
             --security-opt apparmor=unconfined \
@@ -125,7 +124,7 @@ jobs:
             --type qcow2 \
             --target-arch x86_64 \
             --local \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" || [ -f "$(pwd)/output/qcow2_build/qcow2/disk.qcow2" ]
 
           sudo chown -R "$(id -u):$(id -g)" output/qcow2_build
 
@@ -183,7 +182,6 @@ jobs:
         run: |
           mkdir -p output/iso_build
           sudo podman run \
-            --rm \
             --privileged \
             --security-opt label=type:unconfined_t \
             --security-opt apparmor=unconfined \
@@ -194,7 +192,7 @@ jobs:
             --type anaconda-iso \
             --target-arch x86_64 \
             --local \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" || [ -f "$(pwd)/output/iso_build/bootiso/install.iso" ]
 
           sudo chown -R "$(id -u):$(id -g)" output/iso_build
 
