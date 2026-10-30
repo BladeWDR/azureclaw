@@ -104,6 +104,8 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     mkdir -p /etc/nftables.d && \
     chmod 0755 /etc/nftables.d && \
     chmod 0644 /etc/nftables.d/* && \
+    mkdir -p /etc/wireguard && \
+    chmod 0700 /etc/wireguard && \
     chmod 0644 /etc/dnsmasq.conf && \
     chmod 0755 /etc/dnsmasq.d && \
     chmod 0644 /etc/dnsmasq.d/* && \

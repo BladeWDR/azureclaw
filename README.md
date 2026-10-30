@@ -18,7 +18,7 @@ This project is not in any way affiliated with Microsoft or Microsoft Azure.
 | **Network Management** | `NetworkManager` | Declarative connection keyfiles in `/etc/NetworkManager/system-connections/`. |
 | **VPN Support** | WireGuard, Tailscale, IPsec | `wireguard-tools`, `tailscale`, `strongswan`, `NetworkManager-l2tp` (backed by `go-l2tp`) |
 | **Telemetry & Metrics** | Grafana Alloy | Streams host node metrics and journald logs to Prometheus, Mimir, and Loki. |
-| **Management** | SSH & Cockpit | Public-key OpenSSH, interactive login monitor, and Cockpit web console with native Azureclaw Router extension (port forwarding, DHCP reservations, DNS overrides). |
+| **Management** | SSH & Cockpit | Public-key OpenSSH, interactive login monitor, and Cockpit web console with native Azureclaw Router extension (WAN/LAN/VLAN configuration, DHCP scopes/options/reservations, DNS overrides, port forwarding, and WireGuard VPN). |
 
 ---
 

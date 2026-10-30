@@ -42,7 +42,7 @@
     }
     .stat-cards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -61,7 +61,7 @@
       margin-bottom: 6px;
     }
     .stat-value {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       color: var(--pf-global--Color--100, #151515);
     }
@@ -80,11 +80,16 @@
       background-color: var(--pf-global--danger-color--100, #c9190b);
       color: #ffffff;
     }
+    .status-neutral {
+      background-color: #6a6e73;
+      color: #ffffff;
+    }
     .nav-tabs {
       display: flex;
       border-bottom: 1px solid var(--pf-global--BorderColor--100, #d2d2d2);
       margin-bottom: 20px;
       gap: 8px;
+      flex-wrap: wrap;
     }
     .nav-tab {
       padding: 10px 18px;
@@ -116,11 +121,18 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
     }
     .panel-header h2 {
       margin: 0;
       font-size: 18px;
       font-weight: 600;
+    }
+    .panel-desc {
+      font-size: 13px;
+      color: #6a6e73;
+      margin-top: 4px;
     }
     .table-container {
       overflow-x: auto;
@@ -150,7 +162,7 @@
     }
     .form-inline-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 12px;
       margin-bottom: 16px;
       padding: 16px;
@@ -173,7 +185,7 @@
       margin-bottom: 4px;
       color: var(--pf-global--Color--200, #4f5255);
     }
-    .form-group input, .form-group select {
+    .form-group input, .form-group select, .form-group textarea {
       width: 100%;
       padding: 6px 10px;
       border: 1px solid var(--pf-global--BorderColor--100, #ccc);
@@ -184,19 +196,15 @@
       color: var(--pf-global--Color--100, #151515);
       transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
     }
-    .form-group input:focus, .form-group select:focus {
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
       outline: none;
       border-color: var(--pf-global--active-color--100, #0066cc);
       box-shadow: 0 0 0 1px var(--pf-global--active-color--100, #0066cc);
     }
-    .form-group input.is-invalid, .form-group select.is-invalid {
+    .form-group input.is-invalid, .form-group select.is-invalid, .form-group textarea.is-invalid {
       border-color: var(--pf-global--danger-color--100, #c9190b) !important;
       background-color: #fff8f7 !important;
       box-shadow: 0 0 0 1px var(--pf-global--danger-color--100, #c9190b) !important;
-    }
-    .form-group input.is-invalid:focus, .form-group select.is-invalid:focus {
-      border-color: var(--pf-global--danger-color--100, #c9190b) !important;
-      box-shadow: 0 0 0 2px rgba(201, 25, 11, 0.3) !important;
     }
     .form-error-msg,
     .form-error-msg * {
@@ -212,9 +220,25 @@
     .form-error-msg.visible {
       display: block !important;
     }
-    .pf-c-alert.pf-m-danger .pf-c-alert__title {
-      color: #c9190b !important;
-      font-weight: 600 !important;
+    .form-hint {
+      font-size: 11px;
+      color: #6a6e73;
+      margin-top: 4px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    .checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin: 0;
+      cursor: pointer;
     }
     .btn {
       padding: 6px 14px;
@@ -225,6 +249,7 @@
       border: 1px solid transparent;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
     }
     .btn-primary {
@@ -261,6 +286,44 @@
       background: #e7f1fa;
       color: #004080;
     }
+    .badge-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 3px;
+      background: #f0f0f0;
+      color: #333333;
+      border: 1px solid #d2d2d2;
+    }
+    .callout-box {
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .callout-warning {
+      background-color: #fff9e6;
+      border-left: 4px solid #f0ab00;
+      color: #795600;
+    }
+    .callout-info {
+      background-color: #e7f1fa;
+      border-left: 4px solid #0066cc;
+      color: #004080;
+    }
+    .log-terminal {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 12px;
+      border-radius: 4px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      max-height: 250px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
@@ -270,7 +333,7 @@
     <div class="header-title">
       <div>
         <h1>Azureclaw Router</h1>
-        <div class="subtitle">Declarative Network Settings (nftables & dnsmasq)</div>
+        <div class="subtitle">Declarative Network Settings (NetworkManager, nftables & dnsmasq)</div>
       </div>
     </div>
     <div>
@@ -302,28 +365,42 @@
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Active Port Forwards</div>
-      <div class="stat-value" id="stat-pf-count">0</div>
+      <div class="stat-label">Interfaces</div>
+      <div class="stat-value" id="stat-iface-count">0</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">DHCP Leases / Reserved</div>
       <div class="stat-value" id="stat-dhcp-count">0 / 0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Port Forwards</div>
+      <div class="stat-value" id="stat-pf-count">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">WireGuard VPN</div>
+      <div class="stat-value">
+        <span class="status-pill status-neutral" id="stat-vpn-status">Inactive</span>
+      </div>
     </div>
   </div>
 
   <!-- Tab Navigation -->
   <div class="nav-tabs">
     <button class="nav-tab active" data-tab="tab-overview">Overview & Leases</button>
+    <button class="nav-tab" data-tab="tab-interfaces">Interfaces & VLANs</button>
+    <button class="nav-tab" data-tab="tab-dhcp">DHCP & DNS</button>
     <button class="nav-tab" data-tab="tab-port-forwards">Port Forwarding</button>
-    <button class="nav-tab" data-tab="tab-dhcp-reservations">DHCP Reservations</button>
-    <button class="nav-tab" data-tab="tab-dns-overrides">DNS Overrides</button>
+    <button class="nav-tab" data-tab="tab-vpn">VPN (WireGuard & IPsec)</button>
   </div>
 
   <!-- Tab 1: Overview & Active Leases -->
   <div id="tab-overview" class="tab-content">
     <div class="panel-card">
       <div class="panel-header">
-        <h2>Network Interfaces</h2>
+        <div>
+          <h2>Network Interfaces</h2>
+          <div class="panel-desc">Physical NICs, VLAN sub-interfaces, and active VPN tunnels</div>
+        </div>
       </div>
       <div class="table-container">
         <table class="pf-c-table">
@@ -345,7 +422,10 @@
 
     <div class="panel-card">
       <div class="panel-header">
-        <h2>Active DHCP Leases</h2>
+        <div>
+          <h2>Active DHCP Leases</h2>
+          <div class="panel-desc">Clients assigned dynamic IP addresses via dnsmasq</div>
+        </div>
       </div>
       <div class="table-container">
         <table class="pf-c-table">
@@ -366,11 +446,415 @@
     </div>
   </div>
 
-  <!-- Tab 2: Port Forwarding (DNAT) -->
+  <!-- Tab 2: Interfaces & VLANs -->
+  <div id="tab-interfaces" class="tab-content" style="display: none;">
+    <!-- WAN Interface -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>WAN Interface (Internet Uplink)</h2>
+          <div class="panel-desc">Configure WAN uplink addressing. Operates with strict Zero-WAN-Exposure stealth posture.</div>
+        </div>
+        <span class="badge-tag" id="wan-dev-badge">Device: detecting...</span>
+      </div>
+
+      <form id="form-wan" novalidate>
+        <div class="form-inline-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="form-group">
+            <label for="wan-method">Addressing Mode</label>
+            <select id="wan-method">
+              <option value="auto">DHCP Client (Automatic / ISP)</option>
+              <option value="manual">Static IPv4 Address</option>
+            </select>
+          </div>
+          <div class="form-group wan-static-input" style="display: none;">
+            <label for="wan-ip">Static IP Address</label>
+            <input type="text" id="wan-ip" placeholder="e.g. 203.0.113.10">
+            <div class="form-error-msg" id="wan-ip-err"></div>
+          </div>
+          <div class="form-group wan-static-input" style="display: none;">
+            <label for="wan-prefix">Prefix Length (CIDR)</label>
+            <input type="number" id="wan-prefix" placeholder="e.g. 24" min="1" max="32" value="24">
+            <div class="form-error-msg" id="wan-prefix-err"></div>
+          </div>
+          <div class="form-group wan-static-input" style="display: none;">
+            <label for="wan-gw">Default Gateway</label>
+            <input type="text" id="wan-gw" placeholder="e.g. 203.0.113.1">
+            <div class="form-error-msg" id="wan-gw-err"></div>
+          </div>
+          <div class="form-group wan-static-input" style="display: none;">
+            <label for="wan-dns">DNS Servers (comma separated)</label>
+            <input type="text" id="wan-dns" placeholder="e.g. 1.1.1.1, 9.9.9.9">
+            <div class="form-error-msg" id="wan-dns-err"></div>
+          </div>
+          <div class="form-group btn-group">
+            <button type="submit" class="btn btn-primary" id="btn-save-wan">Save WAN Settings</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- LAN Interface -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>LAN Interface (Internal Network)</h2>
+          <div class="panel-desc">Primary private network gateway addressing</div>
+        </div>
+        <span class="badge-tag" id="lan-dev-badge">Device: detecting...</span>
+      </div>
+
+      <div class="callout-box callout-warning">
+        ⚠ <strong>Notice:</strong> Changing the router LAN IP address alters the gateway network. You will be disconnected from Cockpit and must reconnect at the new IP address (e.g. <code>https://&lt;new-ip&gt;:9090</code>) after renewing your client lease.
+      </div>
+
+      <form id="form-lan" novalidate>
+        <div class="form-inline-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+          <div class="form-group">
+            <label for="lan-ip">Router LAN IP Address</label>
+            <input type="text" id="lan-ip" placeholder="192.168.1.1" required>
+            <div class="form-error-msg" id="lan-ip-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="lan-prefix">Prefix Length (CIDR)</label>
+            <input type="number" id="lan-prefix" placeholder="24" min="8" max="30" value="24" required>
+            <div class="form-error-msg" id="lan-prefix-err"></div>
+          </div>
+          <div class="form-group btn-group">
+            <button type="submit" class="btn btn-primary" id="btn-save-lan">Save LAN Settings</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- 802.1Q VLANs -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>802.1Q VLANs (Network Segmentation)</h2>
+          <div class="panel-desc">Create isolated virtual networks (e.g., IoT, Guest Wi-Fi, DMZ) with declarative firewall & DHCP</div>
+        </div>
+      </div>
+
+      <!-- Add VLAN Form -->
+      <form id="form-add-vlan" novalidate>
+        <div class="form-inline-grid">
+          <div class="form-group">
+            <label for="vlan-id">VLAN ID (1-4094)</label>
+            <input type="number" id="vlan-id" placeholder="e.g. 100" min="1" max="4094" required>
+            <div class="form-error-msg" id="vlan-id-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="vlan-name">VLAN Name / Label</label>
+            <input type="text" id="vlan-name" placeholder="e.g. IoT" maxlength="32" required>
+            <div class="form-error-msg" id="vlan-name-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="vlan-parent">Parent Interface</label>
+            <select id="vlan-parent">
+              <option value="ens19">ens19 (LAN)</option>
+              <option value="eth1">eth1 (LAN)</option>
+            </select>
+            <div class="form-error-msg" id="vlan-parent-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="vlan-ip">VLAN Gateway IP</label>
+            <input type="text" id="vlan-ip" placeholder="e.g. 10.0.100.1" required>
+            <div class="form-error-msg" id="vlan-ip-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="vlan-prefix">Prefix (CIDR)</label>
+            <input type="number" id="vlan-prefix" placeholder="24" min="8" max="30" value="24" required>
+            <div class="form-error-msg" id="vlan-prefix-err"></div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px;">
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">VLAN Security & DHCP Policies</div>
+          <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="vlan-opt-wan" checked> Allow Internet Access (WAN NAT Masquerade)
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="vlan-opt-isolate" checked> Isolate from Private LAN & Router Management
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="vlan-opt-dhcp" checked> Enable DHCP Server for this VLAN
+            </label>
+          </div>
+
+          <div id="vlan-dhcp-fields" style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
+            <div class="form-group" style="flex: 1; min-width: 140px;">
+              <label for="vlan-dhcp-start">DHCP Pool Start</label>
+              <input type="text" id="vlan-dhcp-start" placeholder="e.g. 10.0.100.50">
+              <div class="form-error-msg" id="vlan-dhcp-start-err"></div>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 140px;">
+              <label for="vlan-dhcp-end">DHCP Pool End</label>
+              <input type="text" id="vlan-dhcp-end" placeholder="e.g. 10.0.100.200">
+              <div class="form-error-msg" id="vlan-dhcp-end-err"></div>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 120px;">
+              <label for="vlan-dhcp-lease">Lease Duration</label>
+              <input type="text" id="vlan-dhcp-lease" value="24h" placeholder="24h">
+              <div class="form-error-msg" id="vlan-dhcp-lease-err"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: right; margin-bottom: 16px;">
+          <button type="submit" class="btn btn-primary">+ Create VLAN</button>
+        </div>
+      </form>
+
+      <!-- VLANs Table -->
+      <div class="table-container">
+        <table class="pf-c-table">
+          <thead>
+            <tr>
+              <th>VLAN ID</th>
+              <th>Name</th>
+              <th>Sub-Interface</th>
+              <th>Gateway IP</th>
+              <th>Internet Access</th>
+              <th>LAN Isolated</th>
+              <th>DHCP Pool</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-vlans-body">
+            <tr><td colspan="8" class="empty-state">No 802.1Q VLANs configured.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-hint" style="margin-top: 12px;">
+        VLAN interfaces are created in NetworkManager, firewall rules are saved to <code>/etc/nftables.d/40-vlans.nft</code>, and DHCP pools to <code>/etc/dnsmasq.d/40-vlans.conf</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: DHCP & DNS -->
+  <div id="tab-dhcp" class="tab-content" style="display: none;">
+    <!-- LAN DHCP Scope -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>Primary LAN DHCP Scope & Options</h2>
+          <div class="panel-desc">Configure the address allocation pool, lease duration, and gateway/DNS options for the primary LAN</div>
+        </div>
+      </div>
+
+      <form id="form-dhcp-scope" novalidate>
+        <div style="margin-bottom: 12px;">
+          <label class="checkbox-label">
+            <input type="checkbox" id="dhcp-scope-enabled" checked> Enable DHCP Server on LAN
+          </label>
+        </div>
+
+        <div class="form-inline-grid">
+          <div class="form-group">
+            <label for="dhcp-range-start">Pool Start IP</label>
+            <input type="text" id="dhcp-range-start" placeholder="192.168.1.50" required>
+            <div class="form-error-msg" id="dhcp-range-start-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="dhcp-range-end">Pool End IP</label>
+            <input type="text" id="dhcp-range-end" placeholder="192.168.1.200" required>
+            <div class="form-error-msg" id="dhcp-range-end-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="dhcp-netmask">Subnet Mask</label>
+            <input type="text" id="dhcp-netmask" placeholder="255.255.255.0" value="255.255.255.0" required>
+            <div class="form-error-msg" id="dhcp-netmask-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="dhcp-lease-time">Lease Duration</label>
+            <input type="text" id="dhcp-lease-time" placeholder="24h" value="24h" required>
+            <div class="form-error-msg" id="dhcp-lease-time-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="dhcp-opt-gw">Default Gateway (Option 3)</label>
+            <input type="text" id="dhcp-opt-gw" placeholder="192.168.1.1">
+            <div class="form-error-msg" id="dhcp-opt-gw-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="dhcp-opt-dns">DNS Server(s) (Option 6)</label>
+            <input type="text" id="dhcp-opt-dns" placeholder="192.168.1.1">
+            <div class="form-error-msg" id="dhcp-opt-dns-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="dhcp-opt-domain">Domain Name (Option 15)</label>
+            <input type="text" id="dhcp-opt-domain" placeholder="home.arpa" value="home.arpa">
+            <div class="form-error-msg" id="dhcp-opt-domain-err"></div>
+          </div>
+          <div class="form-group btn-group">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Save DHCP Scope</button>
+          </div>
+        </div>
+      </form>
+      <div class="form-hint">
+        Scope parameters are saved to <code>/etc/dnsmasq.d/30-dhcp.conf</code> and verified with <code>dnsmasq --test</code> before reloading.
+      </div>
+    </div>
+
+    <!-- Custom DHCP Options -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>Custom DHCP Options</h2>
+          <div class="panel-desc">Push custom DHCP tags/options (e.g. Option 42 NTP, Option 66 TFTP, Option 121 Static Routes)</div>
+        </div>
+      </div>
+
+      <form id="form-add-dhcp-opt" novalidate>
+        <div class="form-inline-grid" style="grid-template-columns: 1fr 1fr 2fr auto;">
+          <div class="form-group">
+            <label for="opt-scope">Target Scope</label>
+            <select id="opt-scope">
+              <option value="">Global (All Interfaces)</option>
+              <option value="lan">LAN Scope</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="opt-code">Option Code or Name</label>
+            <input type="text" id="opt-code" placeholder="e.g. 42 or ntp-server" required>
+            <div class="form-error-msg" id="opt-code-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="opt-val">Option Value</label>
+            <input type="text" id="opt-val" placeholder="e.g. 192.168.1.10" required>
+            <div class="form-error-msg" id="opt-val-err"></div>
+          </div>
+          <div class="form-group btn-group">
+            <button type="submit" class="btn btn-primary">+ Add Option</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-container">
+        <table class="pf-c-table">
+          <thead>
+            <tr>
+              <th>Scope / Tag</th>
+              <th>Option</th>
+              <th>Value</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-dhcp-opts-body">
+            <tr><td colspan="4" class="empty-state">No custom DHCP options configured.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Static DHCP Reservations -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>Static DHCP Reservations</h2>
+          <div class="panel-desc">Assign persistent IP addresses to specific client MAC addresses</div>
+        </div>
+      </div>
+
+      <form id="form-add-res" novalidate>
+        <div class="form-inline-grid">
+          <div class="form-group">
+            <label for="res-name">Hostname / Label</label>
+            <input type="text" id="res-name" placeholder="e.g. nas.home.arpa" maxlength="63" required>
+            <div class="form-error-msg" id="res-name-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="res-mac">MAC Address</label>
+            <input type="text" id="res-mac" placeholder="e.g. 00:11:22:33:44:55" maxlength="17" required>
+            <div class="form-error-msg" id="res-mac-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="res-ip">Reserved IP Address</label>
+            <input type="text" id="res-ip" placeholder="e.g. 192.168.1.50" required>
+            <div class="form-error-msg" id="res-ip-err"></div>
+          </div>
+          <div class="form-group btn-group">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Reservation</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-container">
+        <table class="pf-c-table">
+          <thead>
+            <tr>
+              <th>Hostname</th>
+              <th>MAC Address</th>
+              <th>Reserved IP</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-res-body">
+            <tr><td colspan="4" class="empty-state">No static reservations configured.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-hint" style="margin-top: 12px;">
+        Written to <code>/etc/dnsmasq.d/50-reservations.conf</code> and applied via <code>systemctl reload dnsmasq</code>.
+      </div>
+    </div>
+
+    <!-- Local DNS Overrides -->
+    <div class="panel-card">
+      <div class="panel-header">
+        <div>
+          <h2>Local DNS Host Overrides</h2>
+          <div class="panel-desc">Custom local domain name resolution records served by dnsmasq</div>
+        </div>
+      </div>
+
+      <form id="form-add-dns" novalidate>
+        <div class="form-inline-grid">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="dns-domain">Domain Name / Hostname</label>
+            <input type="text" id="dns-domain" placeholder="e.g. vault.home.arpa" maxlength="253" required>
+            <div class="form-error-msg" id="dns-domain-err"></div>
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="dns-ip">Target IP Address</label>
+            <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.100" required>
+            <div class="form-error-msg" id="dns-ip-err"></div>
+          </div>
+          <div class="form-group btn-group">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Host</button>
+          </div>
+        </div>
+      </form>
+
+      <div class="table-container">
+        <table class="pf-c-table">
+          <thead>
+            <tr>
+              <th>Domain / FQDN</th>
+              <th>Target IP Address</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-dns-body">
+            <tr><td colspan="3" class="empty-state">No DNS host overrides configured.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-hint" style="margin-top: 12px;">
+        Written to <code>/etc/dnsmasq.d/50-dns-hosts.conf</code> and applied via <code>systemctl reload dnsmasq</code>.
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 4: Port Forwarding (DNAT) -->
   <div id="tab-port-forwards" class="tab-content" style="display: none;">
     <div class="panel-card">
       <div class="panel-header">
-        <h2>Configured Port Forwards</h2>
+        <div>
+          <h2>Configured Port Forwards</h2>
+          <div class="panel-desc">DNAT rules forwarding external WAN traffic to internal servers</div>
+        </div>
       </div>
 
       <!-- Add Rule Form -->
@@ -379,7 +863,7 @@
           <div class="form-group">
             <label for="pf-name">Rule Name / Service</label>
             <input type="text" id="pf-name" placeholder="e.g. Plex Server" maxlength="32" required>
-            <div class="form-error-msg" id="pf-name-err" style="color: #c9190b !important;"></div>
+            <div class="form-error-msg" id="pf-name-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-proto">Protocol</label>
@@ -388,22 +872,22 @@
               <option value="udp">UDP</option>
               <option value="both">TCP + UDP</option>
             </select>
-            <div class="form-error-msg" id="pf-proto-err" style="color: #c9190b !important;"></div>
+            <div class="form-error-msg" id="pf-proto-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-wan-port">WAN (External) Port</label>
             <input type="number" id="pf-wan-port" placeholder="e.g. 32400" min="1" max="65535" required>
-            <div class="form-error-msg" id="pf-wan-port-err" style="color: #c9190b !important;"></div>
+            <div class="form-error-msg" id="pf-wan-port-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-lan-ip">LAN Target IP</label>
             <input type="text" id="pf-lan-ip" placeholder="e.g. 192.168.1.100" required>
-            <div class="form-error-msg" id="pf-lan-ip-err" style="color: #c9190b !important;"></div>
+            <div class="form-error-msg" id="pf-lan-ip-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-lan-port">LAN (Internal) Port</label>
             <input type="number" id="pf-lan-port" placeholder="Same as WAN" min="1" max="65535">
-            <div class="form-error-msg" id="pf-lan-port-err" style="color: #c9190b !important;"></div>
+            <div class="form-error-msg" id="pf-lan-port-err"></div>
           </div>
           <div class="form-group btn-group">
             <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Rule</button>
@@ -428,107 +912,124 @@
           </tbody>
         </table>
       </div>
-      <div style="margin-top: 16px; font-size: 12px; color: #6a6e73;">
+      <div class="form-hint" style="margin-top: 16px;">
         Changes are written to <code>/etc/nftables.d/50-port-forwards.nft</code> and verified with <code>nft -c</code> before reloading.
       </div>
     </div>
   </div>
 
-  <!-- Tab 3: DHCP Static Reservations -->
-  <div id="tab-dhcp-reservations" class="tab-content" style="display: none;">
+  <!-- Tab 5: VPN (WireGuard & IPsec) -->
+  <div id="tab-vpn" class="tab-content" style="display: none;">
+    <!-- WireGuard VPN -->
     <div class="panel-card">
       <div class="panel-header">
-        <h2>Static DHCP Reservations</h2>
+        <div>
+          <h2>WireGuard VPN (<code>wg0</code>)</h2>
+          <div class="panel-desc">Declarative point-to-point and site-to-site cryptographic tunnel</div>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="status-pill status-neutral" id="wg-tunnel-status">Inactive</span>
+          <button class="btn btn-secondary" id="btn-wg-toggle">Start Tunnel</button>
+          <button class="btn btn-danger" id="btn-wg-delete" style="display: none;">Delete</button>
+        </div>
       </div>
 
-      <!-- Add Reservation Form -->
-      <form id="form-add-res" novalidate>
+      <!-- Active Connection Monitor Box -->
+      <div id="wg-active-info" style="display: none; margin-bottom: 16px; padding: 12px; background: #e7f1fa; border-left: 4px solid #0066cc; border-radius: 4px;">
+        <div style="font-weight: 600; font-size: 13px; margin-bottom: 6px;">Live Tunnel Status:</div>
+        <div style="font-family: monospace; font-size: 12px;" id="wg-active-text">Connecting...</div>
+      </div>
+
+      <!-- WireGuard Configuration Form -->
+      <form id="form-wg-config" novalidate>
         <div class="form-inline-grid">
           <div class="form-group">
-            <label for="res-name">Hostname / Label</label>
-            <input type="text" id="res-name" placeholder="e.g. nas.home.arpa" maxlength="63" required>
-            <div class="form-error-msg" id="res-name-err" style="color: #c9190b !important;"></div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label for="wg-privkey" style="margin: 0;">Router Private Key</label>
+              <button type="button" class="btn btn-secondary" id="btn-wg-genkeys" style="padding: 2px 6px; font-size: 11px;">
+                🔑 Generate Keypair
+              </button>
+            </div>
+            <input type="text" id="wg-privkey" placeholder="44-char base64 private key" required>
+            <div class="form-error-msg" id="wg-privkey-err"></div>
           </div>
           <div class="form-group">
-            <label for="res-mac">MAC Address</label>
-            <input type="text" id="res-mac" placeholder="e.g. 00:11:22:33:44:55" maxlength="17" required>
-            <div class="form-error-msg" id="res-mac-err" style="color: #c9190b !important;"></div>
+            <label for="wg-pubkey">Router Public Key (Share with Peer)</label>
+            <input type="text" id="wg-pubkey" placeholder="Generated from private key" readonly style="background: #f0f0f0;">
           </div>
           <div class="form-group">
-            <label for="res-ip">Reserved IP Address</label>
-            <input type="text" id="res-ip" placeholder="e.g. 192.168.1.50" required>
-            <div class="form-error-msg" id="res-ip-err" style="color: #c9190b !important;"></div>
+            <label for="wg-addr">Tunnel IP & Prefix</label>
+            <input type="text" id="wg-addr" placeholder="e.g. 10.2.0.2/24" required>
+            <div class="form-error-msg" id="wg-addr-err"></div>
           </div>
-          <div class="form-group btn-group">
-            <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Reservation</button>
+          <div class="form-group">
+            <label for="wg-listen-port">Listen Port (Optional)</label>
+            <input type="number" id="wg-listen-port" placeholder="e.g. 51820" min="1" max="65535">
+            <div class="form-error-msg" id="wg-listen-port-err"></div>
           </div>
         </div>
-      </form>
 
-      <div class="table-container">
-        <table class="pf-c-table">
-          <thead>
-            <tr>
-              <th>Hostname</th>
-              <th>MAC Address</th>
-              <th>Reserved IP</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="table-res-body">
-            <tr><td colspan="4" class="empty-state">No static reservations configured.</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div style="margin-top: 16px; font-size: 12px; color: #6a6e73;">
-        Changes are written to <code>/etc/dnsmasq.d/50-reservations.conf</code> and applied via <code>systemctl reload dnsmasq</code>.
+        <div class="form-inline-grid">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="wg-peer-pubkey">Peer Public Key</label>
+            <input type="text" id="wg-peer-pubkey" placeholder="Remote peer base64 public key" required>
+            <div class="form-error-msg" id="wg-peer-pubkey-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="wg-peer-endpoint">Peer Endpoint (Host:Port)</label>
+            <input type="text" id="wg-peer-endpoint" placeholder="e.g. vpn.example.com:51820">
+            <div class="form-error-msg" id="wg-peer-endpoint-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="wg-allowed-ips">Allowed IPs (Subnets)</label>
+            <input type="text" id="wg-allowed-ips" placeholder="0.0.0.0/0 or 10.2.0.0/24" value="0.0.0.0/0" required>
+            <div class="form-error-msg" id="wg-allowed-ips-err"></div>
+          </div>
+          <div class="form-group">
+            <label for="wg-keepalive">Keepalive (Seconds)</label>
+            <input type="number" id="wg-keepalive" placeholder="25" value="25" min="0" max="3600">
+            <div class="form-error-msg" id="wg-keepalive-err"></div>
+          </div>
+        </div>
+
+        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px;">
+          <label class="checkbox-label">
+            <input type="checkbox" id="wg-inbound-wan"> Enable Inbound Listener Port on WAN
+          </label>
+          <div class="form-hint" style="color: #795600; margin-top: 4px;">
+            ⚠ <strong>Zero-WAN-Exposure Note:</strong> Leave this unchecked if Azureclaw acts as an outbound client. Only check if external peers initiate inbound connections to this router over WAN.
+          </div>
+        </div>
+
+        <div style="text-align: right;">
+          <button type="submit" class="btn btn-primary" id="btn-save-wg">Save & Apply WireGuard Configuration</button>
+        </div>
+      </form>
+      <div class="form-hint" style="margin-top: 12px;">
+        Configuration is saved to <code>/etc/wireguard/wg0.conf</code> and managed via <code>wg-quick@wg0</code>.
       </div>
     </div>
-  </div>
 
-  <!-- Tab 4: DNS Overrides -->
-  <div id="tab-dns-overrides" class="tab-content" style="display: none;">
+    <!-- IPsec (StrongSwan) Status -->
     <div class="panel-card">
       <div class="panel-header">
-        <h2>Local DNS Host Overrides</h2>
-      </div>
-
-      <!-- Add DNS Override Form -->
-      <form id="form-add-dns" novalidate>
-        <div class="form-inline-grid">
-          <div class="form-group" style="grid-column: span 2;">
-            <label for="dns-domain">Domain Name / Hostname</label>
-            <input type="text" id="dns-domain" placeholder="e.g. vault.home.arpa" maxlength="253" required>
-            <div class="form-error-msg" id="dns-domain-err" style="color: #c9190b !important;"></div>
-          </div>
-          <div class="form-group" style="grid-column: span 2;">
-            <label for="dns-ip">Target IP Address</label>
-            <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.100" required>
-            <div class="form-error-msg" id="dns-ip-err" style="color: #c9190b !important;"></div>
-          </div>
-          <div class="form-group btn-group">
-            <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Host</button>
-          </div>
+        <div>
+          <h2>IPsec (StrongSwan) VPN</h2>
+          <div class="panel-desc">IKEv1 / IKEv2 site-to-site IPsec subsystem status and active Security Associations (SAs)</div>
         </div>
-      </form>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span class="status-pill status-neutral" id="ipsec-service-status">Inactive</span>
+          <button class="btn btn-secondary" id="btn-ipsec-refresh">↻ Refresh</button>
+        </div>
+      </div>
 
-      <div class="table-container">
-        <table class="pf-c-table">
-          <thead>
-            <tr>
-              <th>Domain / FQDN</th>
-              <th>Target IP Address</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="table-dns-body">
-            <tr><td colspan="3" class="empty-state">No DNS host overrides configured.</td></tr>
-          </tbody>
-        </table>
+      <div style="margin-bottom: 12px;">
+        <div class="callout-box callout-info">
+          ℹ <strong>Notice:</strong> Basic status monitoring for StrongSwan is displayed below. For advanced IKEv2 enterprise site-to-site configuration with X.509 certificates or pre-shared keys, configure connection keyfiles via <code>swanctl.conf</code> or NetworkManager CLI.
+        </div>
       </div>
-      <div style="margin-top: 16px; font-size: 12px; color: #6a6e73;">
-        Changes are written to <code>/etc/dnsmasq.d/50-dns-hosts.conf</code> and applied via <code>systemctl reload dnsmasq</code>.
-      </div>
+
+      <div class="log-terminal" id="ipsec-output">Checking StrongSwan IPsec status...</div>
     </div>
   </div>
 
