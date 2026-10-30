@@ -72,6 +72,7 @@ RUN systemctl disable systemd-resolved.service || true && \
 COPY config/sysctl.d/99-router.conf /usr/lib/sysctl.d/99-router.conf
 COPY config/nftables/nftables.conf /etc/nftables/nftables.conf
 COPY config/nftables/nftables.conf /etc/sysconfig/nftables.conf
+COPY config/nftables/interfaces.nft /etc/nftables/interfaces.nft
 COPY config/nftables/nftables.d/ /etc/nftables.d/
 COPY config/dnsmasq/dnsmasq.conf /etc/dnsmasq.conf
 COPY config/dnsmasq/dnsmasq.d/ /etc/dnsmasq.d/
@@ -101,6 +102,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0600 /etc/ssh/sshd_config.d/99-hardening.conf && \
     chmod 0644 /etc/nftables/nftables.conf && \
     chmod 0644 /etc/sysconfig/nftables.conf && \
+    chmod 0644 /etc/nftables/interfaces.nft && \
     mkdir -p /etc/nftables.d && \
     chmod 0755 /etc/nftables.d && \
     chmod 0644 /etc/nftables.d/* && \

@@ -6,19 +6,21 @@
 
 let state = {
   interfaces: [],
-  wan: { method: "auto", ip: "", prefix: 24, gateway: "", dns: "", device: "ens18" },
-  lan: { ip: "192.168.1.1", prefix: 24, device: "ens19" },
+  physicalIfaces: [],
   vlans: [],
-  dhcpScope: {
-    enabled: true,
-    rangeStart: "192.168.1.50",
-    rangeEnd: "192.168.1.200",
-    netmask: "255.255.255.0",
-    leaseTime: "24h",
-    gateway: "192.168.1.1",
-    dns: "192.168.1.1",
-    domain: "home.arpa"
-  },
+  dhcpScopes: [
+    {
+      iface: "ens19",
+      enabled: true,
+      rangeStart: "192.168.1.50",
+      rangeEnd: "192.168.1.200",
+      netmask: "255.255.255.0",
+      leaseTime: "24h",
+      gateway: "192.168.1.1",
+      dns: "192.168.1.1",
+      domain: "home.arpa"
+    }
+  ],
   dhcpOptions: [],
   reservations: [],
   dnsOverrides: [],
@@ -120,6 +122,16 @@ const Validators = {
     return /^[a-zA-Z][a-zA-Z0-9_-]{0,14}$/.test(name.trim());
   },
 
+  isValidRole(role) {
+    if (typeof role !== "string") return false;
+    return ["wan", "lan", "isolated", "unassigned"].includes(role.trim());
+  },
+
+  isValidMethod(method) {
+    if (typeof method !== "string") return false;
+    return ["auto", "manual"].includes(method.trim());
+  },
+
   isValidIPv4CIDR(cidr, allowZeroPrefix = false) {
     if (!cidr || typeof cidr !== "string") return false;
     const parts = cidr.trim().split("/");
@@ -189,6 +201,18 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+function prefixToNetmask(prefix) {
+  const p = parseInt(prefix, 10);
+  if (!Number.isInteger(p) || p < 1 || p > 32) return "255.255.255.0";
+  const mask = (0xffffffff << (32 - p)) >>> 0;
+  return [
+    (mask >>> 24) & 255,
+    (mask >>> 16) & 255,
+    (mask >>> 8) & 255,
+    mask & 255
+  ].join(".");
+}
+
 // ============================================================================
 // Initialization & Refresh
 // ============================================================================
@@ -202,8 +226,6 @@ document.addEventListener("DOMContentLoaded", () => {
 function refreshAll() {
   loadServiceStatus();
   loadInterfaces();
-  loadWanConfig();
-  loadLanConfig();
   loadVlans();
   loadDHCPScopeAndOptions();
   loadDHCPLeases();
@@ -288,17 +310,107 @@ function clearFormErrors(formId) {
   });
 }
 
+function updatePhysFormVisibility() {
+  const roleEl = document.getElementById("phys-role");
+  const methodEl = document.getElementById("phys-method");
+  const methodGroup = document.getElementById("phys-method-group");
+  if (!roleEl || !methodEl) return;
+
+  const role = roleEl.value;
+  if (role === "unassigned") {
+    if (methodGroup) methodGroup.style.display = "none";
+    document.querySelectorAll(".phys-static-field, .phys-wan-static-field").forEach(el => {
+      el.style.display = "none";
+    });
+    return;
+  }
+
+  if (role === "lan" || role === "isolated") {
+    methodEl.value = "manual";
+    if (methodGroup) methodGroup.style.display = "none";
+  } else {
+    if (methodGroup) methodGroup.style.display = "flex";
+  }
+
+  const isManual = methodEl.value === "manual" || role === "lan" || role === "isolated";
+  document.querySelectorAll(".phys-static-field").forEach(el => {
+    el.style.display = isManual ? "flex" : "none";
+  });
+  document.querySelectorAll(".phys-wan-static-field").forEach(el => {
+    el.style.display = (role === "wan" && isManual) ? "flex" : "none";
+  });
+}
+
+function populatePhysFormForDevice(devName) {
+  clearFormErrors("form-phys-iface");
+  const devSelect = document.getElementById("phys-dev");
+  if (devSelect && devName) {
+    devSelect.value = devName;
+  }
+  const selectedDev = devName || (devSelect ? devSelect.value : "");
+  const info = state.physicalIfaces.find(p => p.dev === selectedDev);
+
+  const roleEl = document.getElementById("phys-role");
+  const methodEl = document.getElementById("phys-method");
+  const ipEl = document.getElementById("phys-ip");
+  const prefixEl = document.getElementById("phys-prefix");
+  const gwEl = document.getElementById("phys-gw");
+  const dnsEl = document.getElementById("phys-dns");
+
+  if (!info) {
+    if (roleEl) roleEl.value = "unassigned";
+    if (methodEl) methodEl.value = "auto";
+    if (ipEl) ipEl.value = "";
+    if (prefixEl) prefixEl.value = "24";
+    if (gwEl) gwEl.value = "";
+    if (dnsEl) dnsEl.value = "";
+    updatePhysFormVisibility();
+    return;
+  }
+
+  if (roleEl) roleEl.value = info.role || "unassigned";
+  if (methodEl) methodEl.value = info.method || (info.role === "wan" ? "auto" : "manual");
+  if (ipEl) ipEl.value = info.ip || "";
+  if (prefixEl) prefixEl.value = info.prefix || 24;
+  if (gwEl) gwEl.value = info.gateway || "";
+  if (dnsEl) dnsEl.value = info.dns || "";
+
+  updatePhysFormVisibility();
+}
+
 function setupUIEvents() {
   document.getElementById("btn-refresh").addEventListener("click", refreshAll);
 
-  // Toggle WAN mode fields
-  const wanMethodSelect = document.getElementById("wan-method");
-  if (wanMethodSelect) {
-    wanMethodSelect.addEventListener("change", (e) => {
-      const isManual = e.target.value === "manual";
-      document.querySelectorAll(".wan-static-input").forEach(el => {
-        el.style.display = isManual ? "flex" : "none";
-      });
+  // Physical interface selector & role/method toggles
+  const physDevSelect = document.getElementById("phys-dev");
+  if (physDevSelect) {
+    physDevSelect.addEventListener("change", (e) => {
+      populatePhysFormForDevice(e.target.value);
+    });
+  }
+
+  const physRoleSelect = document.getElementById("phys-role");
+  if (physRoleSelect) {
+    physRoleSelect.addEventListener("change", () => {
+      const role = physRoleSelect.value;
+      const methodEl = document.getElementById("phys-method");
+      if (role === "lan" || role === "isolated") {
+        if (methodEl) methodEl.value = "manual";
+      }
+      updatePhysFormVisibility();
+    });
+  }
+
+  const physMethodSelect = document.getElementById("phys-method");
+  if (physMethodSelect) {
+    physMethodSelect.addEventListener("change", updatePhysFormVisibility);
+  }
+
+  // DHCP scope interface selector
+  const dhcpScopeIfaceSelect = document.getElementById("dhcp-scope-iface");
+  if (dhcpScopeIfaceSelect) {
+    dhcpScopeIfaceSelect.addEventListener("change", (e) => {
+      populateDHCPScopeFormForIface(e.target.value);
     });
   }
 
@@ -398,8 +510,51 @@ function updateStatusPill(elementId, isActive, textOverride = null) {
 }
 
 // ============================================================================
-// Network Interfaces
+// Physical Network Interfaces (Multi-NIC Role & Subnet Management)
 // ============================================================================
+const IFACES_NFT_FILE = "/etc/nftables/interfaces.nft";
+const ISOLATED_NFT_FILE = "/etc/nftables.d/20-isolated-ifaces.nft";
+const IFACES_DNS_FILE = "/etc/dnsmasq.d/10-interfaces.conf";
+
+function isValidPhysIfaceObject(p) {
+  if (!p || typeof p !== "object") return false;
+  if (!Validators.isValidIfname(p.dev)) return false;
+  if (!Validators.isValidRole(p.role)) return false;
+  if (!Validators.isValidMethod(p.method)) return false;
+  if (p.role !== "unassigned" && (p.method === "manual" || p.role === "lan" || p.role === "isolated")) {
+    if (!Validators.isValidIPv4(p.ip)) return false;
+    if (!Validators.isValidCIDR(p.prefix)) return false;
+    if (p.role === "wan" && p.gateway && !Validators.isValidIPv4(p.gateway)) return false;
+    if (p.role === "wan" && p.dns && !Validators.isValidDNSList(p.dns)) return false;
+  }
+  return true;
+}
+
+function isVirtualOrVpnDev(devName) {
+  if (!devName) return true;
+  const lower = devName.toLowerCase();
+  return (
+    lower === "lo" ||
+    lower.includes(".") ||
+    lower.includes("vlan") ||
+    lower.startsWith("veth") ||
+    lower.startsWith("br-") ||
+    lower.startsWith("virbr") ||
+    lower.startsWith("docker") ||
+    lower.startsWith("podman") ||
+    lower.startsWith("wg") ||
+    lower.startsWith("tailscale") ||
+    lower.startsWith("tun") ||
+    lower.startsWith("tap") ||
+    lower.startsWith("ppp") ||
+    lower.startsWith("ipsec") ||
+    lower.startsWith("xfrm") ||
+    lower.startsWith("sit") ||
+    lower.startsWith("gre") ||
+    lower.startsWith("dummy")
+  );
+}
+
 function loadInterfaces() {
   const ipPromise = cockpit.spawn(["ip", "-j", "addr"])
     .then(jsonText => {
@@ -407,285 +562,660 @@ function loadInterfaces() {
     })
     .catch(() => []);
 
-  const nmPromise = cockpit.spawn(["nmcli", "-t", "-f", "DEVICE,CONNECTION", "device"])
+  const nmPromise = cockpit.spawn(["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device"])
     .then(text => {
       const map = {};
       text.split("\n").forEach(line => {
         const parts = line.split(":");
-        if (parts.length >= 2 && parts[0] && parts[1] && parts[1] !== "--") {
-          map[parts[0].trim()] = parts[1].trim();
+        if (parts.length >= 4 && parts[0]) {
+          const dev = parts[0].trim();
+          const type = parts[1].trim();
+          const devState = parts[2].trim();
+          const conn = parts.slice(3).join(":").trim();
+          map[dev] = {
+            type,
+            state: devState,
+            connection: conn !== "--" ? conn : ""
+          };
         }
       });
       return map;
     })
     .catch(() => ({}));
 
-  Promise.all([ipPromise, nmPromise])
-    .then(([data, nmMap]) => {
+  const savedIfacesPromise = cockpit.file(IFACES_NFT_FILE).read()
+    .then(content => {
+      if (!content) return null;
+      const match = content.match(/# JSON_IFACES:\s*(.+)$/m);
+      if (match) {
+        try {
+          const parsed = JSON.parse(match[1]);
+          if (Array.isArray(parsed)) {
+            return parsed.filter(isValidPhysIfaceObject);
+          }
+        } catch(e) {}
+      }
+      return null;
+    })
+    .catch(() => null);
+
+  Promise.all([ipPromise, nmPromise, savedIfacesPromise])
+    .then(([ipData, nmMap, savedIfaces]) => {
       const tbody = document.getElementById("table-interfaces-body");
-      tbody.innerHTML = "";
+      if (tbody) tbody.innerHTML = "";
 
       state.interfaces = [];
-      const physicalDevs = [];
+      const savedMap = {};
+      if (savedIfaces) {
+        savedIfaces.forEach(item => {
+          savedMap[item.dev] = item;
+        });
+      }
 
-      if (!data || data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No network interfaces found.</td></tr>`;
-        document.getElementById("stat-iface-count").textContent = "0";
+      // Collect all known interfaces from ip -j addr and nmcli device
+      const seenDevs = new Set();
+      const rawIfaces = [];
+
+      if (Array.isArray(ipData)) {
+        ipData.forEach(iface => {
+          if (!iface.ifname) return;
+          const cleanDev = iface.ifname.split("@")[0];
+          seenDevs.add(cleanDev);
+          rawIfaces.push({
+            dev: cleanDev,
+            operstate: iface.operstate || "UNKNOWN",
+            mac: iface.address || "--",
+            addr_info: iface.addr_info || []
+          });
+        });
+      }
+
+      Object.keys(nmMap).forEach(dev => {
+        const cleanDev = dev.split("@")[0];
+        if (!seenDevs.has(cleanDev) && nmMap[dev].type === "ethernet") {
+          seenDevs.add(cleanDev);
+          rawIfaces.push({
+            dev: cleanDev,
+            operstate: nmMap[dev].state === "connected" ? "UP" : "DOWN",
+            mac: "--",
+            addr_info: []
+          });
+        }
+      });
+
+      const newPhysicalIfaces = [];
+
+      if (rawIfaces.length === 0) {
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="5" class="empty-state">No network interfaces found.</td></tr>`;
+        }
+        const countEl = document.getElementById("stat-iface-count");
+        if (countEl) countEl.textContent = "0";
         return;
       }
 
-      data.forEach(iface => {
-        if (!iface.ifname || iface.ifname === "lo" || iface.ifname.startsWith("veth") || iface.ifname.startsWith("br-")) {
+      rawIfaces.forEach(iface => {
+        const cleanDev = iface.dev;
+        if (cleanDev === "lo" || cleanDev.startsWith("veth") || cleanDev.startsWith("br-")) {
           return;
         }
 
-        const cleanDev = iface.ifname.split("@")[0];
-        let role = nmMap[cleanDev] || nmMap[iface.ifname];
+        const nmInfo = nmMap[cleanDev] || {};
+        const connName = nmInfo.connection || "";
+        const ipv4Entry = (iface.addr_info || []).find(a => a.family === "inet");
+        const liveIp = ipv4Entry ? ipv4Entry.local : "";
+        const livePrefix = ipv4Entry ? ipv4Entry.prefixlen : 24;
 
-        if (!role || role === "--") {
+        let displayRole = connName;
+        if (!displayRole) {
           const lower = cleanDev.toLowerCase();
-          if (["eth0", "ens18", "enp1s0"].includes(cleanDev)) role = "WAN";
-          else if (["eth1", "ens19", "enp2s0"].includes(cleanDev)) role = "LAN";
-          else if (lower.includes("vlan") || cleanDev.includes(".")) role = "VLAN";
-          else if (lower.startsWith("tailscale")) role = "Tailscale";
-          else if (lower.startsWith("wg")) role = "WireGuard";
-          else if (lower.startsWith("tun") || lower.startsWith("tap")) role = "OpenVPN";
-          else if (lower.startsWith("ppp") || lower.startsWith("ipsec") || lower.startsWith("xfrm")) role = "IPsec/L2TP";
-          else role = "Other";
+          if (savedMap[cleanDev]) {
+            const r = savedMap[cleanDev].role;
+            displayRole = r === "wan" ? "WAN" : r === "lan" ? "LAN" : r === "isolated" ? "Isolated / DMZ" : "Unassigned";
+          } else if (["eth0", "ens18", "enp1s0"].includes(cleanDev)) {
+            displayRole = "WAN";
+          } else if (["eth1", "ens19", "enp2s0"].includes(cleanDev)) {
+            displayRole = "LAN";
+          } else if (lower.includes("vlan") || cleanDev.includes(".")) {
+            displayRole = "VLAN";
+          } else if (lower.startsWith("tailscale")) {
+            displayRole = "Tailscale";
+          } else if (lower.startsWith("wg")) {
+            displayRole = "WireGuard";
+          } else if (lower.startsWith("tun") || lower.startsWith("tap")) {
+            displayRole = "OpenVPN";
+          } else if (lower.startsWith("ppp") || lower.startsWith("ipsec") || lower.startsWith("xfrm")) {
+            displayRole = "IPsec/L2TP";
+          } else {
+            displayRole = "Unassigned";
+          }
         }
 
-        // Collect physical devices for parent selection
-        if (!cleanDev.includes(".") && !cleanDev.startsWith("wg") && !cleanDev.startsWith("tailscale") && !cleanDev.startsWith("tun")) {
-          physicalDevs.push(cleanDev);
-          if (role === "WAN" || ["eth0", "ens18", "enp1s0"].includes(cleanDev)) {
-            state.wan.device = cleanDev;
+        // Determine if this is a physical Ethernet NIC
+        if (!isVirtualOrVpnDev(cleanDev)) {
+          let role = "unassigned";
+          let method = "auto";
+          let ip = liveIp;
+          let prefix = livePrefix || 24;
+          let gateway = "";
+          let dns = "";
+
+          if (savedMap[cleanDev]) {
+            role = savedMap[cleanDev].role;
+            method = savedMap[cleanDev].method;
+            ip = savedMap[cleanDev].ip || liveIp;
+            prefix = savedMap[cleanDev].prefix || livePrefix || 24;
+            gateway = savedMap[cleanDev].gateway || "";
+            dns = savedMap[cleanDev].dns || "";
+          } else if (connName.startsWith("WAN") || (!connName && ["eth0", "ens18", "enp1s0"].includes(cleanDev))) {
+            role = "wan";
+            method = "auto";
+          } else if (connName.startsWith("LAN") || (!connName && ["eth1", "ens19", "enp2s0"].includes(cleanDev))) {
+            role = "lan";
+            method = "manual";
+            ip = liveIp || "192.168.1.1";
+            prefix = livePrefix || 24;
+          } else if (connName.startsWith("DMZ")) {
+            role = "isolated";
+            method = "manual";
+            ip = liveIp || "";
+            prefix = livePrefix || 24;
           }
-          if (role === "LAN" || ["eth1", "ens19", "enp2s0"].includes(cleanDev)) {
-            state.lan.device = cleanDev;
-          }
+
+          newPhysicalIfaces.push({
+            dev: cleanDev,
+            role,
+            method,
+            ip,
+            prefix,
+            gateway,
+            dns,
+            liveIp,
+            livePrefix,
+            operstate: iface.operstate || "UNKNOWN",
+            mac: iface.mac
+          });
         }
 
         const ips = (iface.addr_info || [])
           .map(a => `${escapeHtml(a.local)}/${escapeHtml(String(a.prefixlen))}`)
           .join("<br>") || "No IP";
 
-        const mac = iface.address || "--";
+        const mac = iface.mac || "--";
         const stateClass = iface.operstate === "UP" ? "status-active" : "status-inactive";
 
-        state.interfaces.push({ dev: cleanDev, role, state: iface.operstate, ips, mac });
+        state.interfaces.push({ dev: cleanDev, role: displayRole, state: iface.operstate, ips, mac });
 
-        const row = document.createElement("tr");
-        row.innerHTML = `
-          <td><strong>${escapeHtml(cleanDev)}</strong></td>
-          <td>${escapeHtml(role)}</td>
-          <td><span class="status-pill ${stateClass}">${escapeHtml(iface.operstate || "UNKNOWN")}</span></td>
-          <td><code>${ips}</code></td>
-          <td><code>${escapeHtml(mac)}</code></td>
-        `;
-        tbody.appendChild(row);
+        if (tbody) {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td><strong>${escapeHtml(cleanDev)}</strong></td>
+            <td>${escapeHtml(displayRole)}</td>
+            <td><span class="status-pill ${stateClass}">${escapeHtml(iface.operstate || "UNKNOWN")}</span></td>
+            <td><code>${ips}</code></td>
+            <td><code>${escapeHtml(mac)}</code></td>
+          `;
+          tbody.appendChild(row);
+        }
       });
 
-      document.getElementById("stat-iface-count").textContent = state.interfaces.length;
-      updateParentDevDropdown(physicalDevs);
-      updateDeviceBadges();
+      state.physicalIfaces = newPhysicalIfaces;
+
+      const countEl = document.getElementById("stat-iface-count");
+      if (countEl) countEl.textContent = String(state.interfaces.length);
+
+      renderPhysicalInterfacesTable();
+      updatePhysicalDropdowns();
     })
     .catch(err => {
       console.warn("Failed to load interfaces:", err);
     });
 }
 
-function updateParentDevDropdown(physicalDevs) {
-  const select = document.getElementById("vlan-parent");
-  if (!select) return;
-  const currentVal = select.value;
-  select.innerHTML = "";
-  const devs = physicalDevs.length > 0 ? physicalDevs : ["ens19", "eth1"];
-  devs.forEach(dev => {
-    const opt = document.createElement("option");
-    opt.value = dev;
-    opt.textContent = `${dev} (${dev === state.lan.device ? "LAN" : "Interface"})`;
-    select.appendChild(opt);
-  });
-  if (devs.includes(currentVal)) {
-    select.value = currentVal;
-  } else if (devs.includes(state.lan.device)) {
-    select.value = state.lan.device;
-  }
-}
+function renderPhysicalInterfacesTable() {
+  const tbody = document.getElementById("table-phys-ifaces-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
 
-function updateDeviceBadges() {
-  const wanBadge = document.getElementById("wan-dev-badge");
-  if (wanBadge) wanBadge.textContent = `Device: ${state.wan.device}`;
-  const lanBadge = document.getElementById("lan-dev-badge");
-  if (lanBadge) lanBadge.textContent = `Device: ${state.lan.device}`;
-}
-
-// ============================================================================
-// WAN Configuration
-// ============================================================================
-function loadWanConfig() {
-  cockpit.spawn(["nmcli", "-t", "-f", "ipv4.method,ipv4.addresses,ipv4.gateway,ipv4.dns", "connection", "show", "WAN"])
-    .then(text => {
-      const lines = text.trim().split("\n");
-      const map = {};
-      lines.forEach(l => {
-        const parts = l.split(":");
-        if (parts.length >= 2) map[parts[0].trim()] = parts.slice(1).join(":").trim();
-      });
-
-      const method = map["ipv4.method"] || "auto";
-      state.wan.method = method;
-
-      const methodSelect = document.getElementById("wan-method");
-      if (methodSelect) {
-        methodSelect.value = method === "manual" ? "manual" : "auto";
-        document.querySelectorAll(".wan-static-input").forEach(el => {
-          el.style.display = method === "manual" ? "flex" : "none";
-        });
-      }
-
-      if (map["ipv4.addresses"]) {
-        const [ip, prefix] = map["ipv4.addresses"].split("/");
-        document.getElementById("wan-ip").value = ip || "";
-        document.getElementById("wan-prefix").value = prefix || "24";
-      }
-      if (map["ipv4.gateway"]) {
-        document.getElementById("wan-gw").value = map["ipv4.gateway"];
-      }
-      if (map["ipv4.dns"]) {
-        document.getElementById("wan-dns").value = map["ipv4.dns"];
-      }
-    })
-    .catch(() => {
-      // WAN connection profile might not exist or defaults to auto
-      document.getElementById("wan-method").value = "auto";
-      document.querySelectorAll(".wan-static-input").forEach(el => el.style.display = "none");
-    });
-}
-
-function saveWanConfig(e) {
-  e.preventDefault();
-  clearFormErrors("form-wan");
-
-  const method = document.getElementById("wan-method").value;
-  if (method === "auto") {
-    // Revert to DHCP
-    cockpit.spawn(["nmcli", "connection", "modify", "WAN", "ipv4.method", "auto", "ipv4.addresses", "", "ipv4.gateway", ""], { superuser: "require" })
-      .then(() => cockpit.spawn(["nmcli", "connection", "up", "WAN"], { superuser: "require" }))
-      .then(() => {
-        showAlert("WAN set to DHCP client (Automatic) and reloaded.");
-        loadWanConfig();
-        loadInterfaces();
-      })
-      .catch(err => {
-        showAlert("Failed to update WAN: " + (err.message || err), true);
-      });
+  if (state.physicalIfaces.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No physical Ethernet interfaces detected.</td></tr>`;
     return;
   }
 
-  // Static WAN
-  const ip = document.getElementById("wan-ip").value.trim();
-  const prefix = document.getElementById("wan-prefix").value.trim();
-  const gw = document.getElementById("wan-gw").value.trim();
-  const dns = document.getElementById("wan-dns").value.trim();
+  state.physicalIfaces.forEach(p => {
+    const roleBadgeMap = {
+      wan: `<span class="status-pill status-active">WAN (Uplink)</span>`,
+      lan: `<span class="status-pill status-active">LAN (Trusted)</span>`,
+      isolated: `<span class="status-pill status-neutral">Isolated / DMZ</span>`,
+      unassigned: `<span class="status-pill status-inactive">Unassigned</span>`
+    };
+    const roleBadge = roleBadgeMap[p.role] || roleBadgeMap.unassigned;
+
+    let modeStr = "--";
+    if (p.role !== "unassigned") {
+      modeStr = p.method === "manual" ? "Static IPv4" : "DHCP Client";
+    }
+
+    const displayIp = p.ip
+      ? `${escapeHtml(p.ip)}/${escapeHtml(String(p.prefix || 24))}`
+      : (p.liveIp ? `${escapeHtml(p.liveIp)}/${escapeHtml(String(p.livePrefix || 24))} (DHCP)` : "No IPv4");
+
+    const gwStr = p.gateway ? `<code>${escapeHtml(p.gateway)}</code>` : "--";
+    const stateClass = p.operstate === "UP" ? "status-active" : "status-inactive";
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${escapeHtml(p.dev)}</strong><br><small style="color: #6a6e73;">${escapeHtml(p.mac || "")}</small></td>
+      <td>${roleBadge}</td>
+      <td>${escapeHtml(modeStr)}</td>
+      <td><code>${displayIp}</code></td>
+      <td>${gwStr}</td>
+      <td><span class="status-pill ${stateClass}">${escapeHtml(p.operstate || "UNKNOWN")}</span></td>
+      <td>
+        <button type="button" class="btn btn-secondary btn-cfg-phys" data-dev="${escapeHtml(p.dev)}">Configure</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  tbody.querySelectorAll(".btn-cfg-phys").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const dev = btn.getAttribute("data-dev");
+      populatePhysFormForDevice(dev);
+      const formEl = document.getElementById("form-phys-iface");
+      if (formEl) formEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  });
+}
+
+function updatePhysicalDropdowns() {
+  const devs = state.physicalIfaces.length > 0
+    ? state.physicalIfaces
+    : [
+        { dev: "ens18", role: "wan", method: "auto", ip: "", prefix: 24 },
+        { dev: "ens19", role: "lan", method: "manual", ip: "192.168.1.1", prefix: 24 }
+      ];
+
+  // 1. Physical NIC selector (#phys-dev)
+  const physSelect = document.getElementById("phys-dev");
+  if (physSelect) {
+    const prevVal = physSelect.value;
+    physSelect.innerHTML = "";
+    devs.forEach(p => {
+      const roleLabel = p.role === "wan" ? "WAN" : p.role === "lan" ? "LAN" : p.role === "isolated" ? "Isolated/DMZ" : "Unassigned";
+      const opt = document.createElement("option");
+      opt.value = p.dev;
+      opt.textContent = `${p.dev} — ${roleLabel}${p.ip ? " (" + p.ip + "/" + p.prefix + ")" : ""}`;
+      physSelect.appendChild(opt);
+    });
+    if (devs.some(p => p.dev === prevVal)) {
+      physSelect.value = prevVal;
+    } else if (devs.length > 0) {
+      physSelect.value = devs[0].dev;
+    }
+    populatePhysFormForDevice(physSelect.value);
+  }
+
+  // 2. VLAN parent interface selector (#vlan-parent)
+  const vlanParentSelect = document.getElementById("vlan-parent");
+  if (vlanParentSelect) {
+    const prevParent = vlanParentSelect.value;
+    vlanParentSelect.innerHTML = "";
+    devs.forEach(p => {
+      const roleLabel = p.role === "wan" ? "WAN" : p.role === "lan" ? "LAN" : p.role === "isolated" ? "Isolated/DMZ" : "Unassigned";
+      const opt = document.createElement("option");
+      opt.value = p.dev;
+      opt.textContent = `${p.dev} (${roleLabel})`;
+      vlanParentSelect.appendChild(opt);
+    });
+    const firstLan = devs.find(p => p.role === "lan");
+    if (devs.some(p => p.dev === prevParent)) {
+      vlanParentSelect.value = prevParent;
+    } else if (firstLan) {
+      vlanParentSelect.value = firstLan.dev;
+    }
+  }
+
+  // 3. DHCP Scope Target Interface selector (#dhcp-scope-iface)
+  const dhcpIfaceSelect = document.getElementById("dhcp-scope-iface");
+  if (dhcpIfaceSelect) {
+    const prevScopeIface = dhcpIfaceSelect.value;
+    dhcpIfaceSelect.innerHTML = "";
+    const lanOrIsoDevs = devs.filter(p => p.role === "lan" || p.role === "isolated");
+    const targetDevs = lanOrIsoDevs.length > 0 ? lanOrIsoDevs : devs;
+    targetDevs.forEach(p => {
+      const roleLabel = p.role === "lan" ? "LAN" : p.role === "isolated" ? "Isolated/DMZ" : p.role.toUpperCase();
+      const opt = document.createElement("option");
+      opt.value = p.dev;
+      opt.textContent = `${p.dev} (${roleLabel}${p.ip ? " — " + p.ip + "/" + p.prefix : ""})`;
+      dhcpIfaceSelect.appendChild(opt);
+    });
+    if (targetDevs.some(p => p.dev === prevScopeIface)) {
+      dhcpIfaceSelect.value = prevScopeIface;
+    } else if (targetDevs.length > 0) {
+      dhcpIfaceSelect.value = targetDevs[0].dev;
+    }
+    populateDHCPScopeFormForIface(dhcpIfaceSelect.value);
+  }
+
+  // 4. Custom DHCP Option Target Scope selector (#opt-scope)
+  updateDHCPOptionScopeSelect();
+}
+
+function updateDHCPOptionScopeSelect() {
+  const optScopeSelect = document.getElementById("opt-scope");
+  if (!optScopeSelect) return;
+  const prevVal = optScopeSelect.value;
+  optScopeSelect.innerHTML = `<option value="">Global (All LAN &amp; VLAN Scopes)</option>`;
+
+  state.dhcpScopes.forEach(s => {
+    if (s.iface && Validators.isValidIfname(s.iface)) {
+      const opt = document.createElement("option");
+      opt.value = s.iface;
+      opt.textContent = `Interface Scope (${s.iface})`;
+      optScopeSelect.appendChild(opt);
+    }
+  });
+
+  state.vlans.forEach(v => {
+    if (Validators.isValidVlanId(v.id)) {
+      const tag = `vlan${v.id}`;
+      const opt = document.createElement("option");
+      opt.value = tag;
+      opt.textContent = `VLAN ${v.id} (${v.name})`;
+      optScopeSelect.appendChild(opt);
+    }
+  });
+
+  if (Array.from(optScopeSelect.options).some(o => o.value === prevVal)) {
+    optScopeSelect.value = prevVal;
+  }
+}
+
+function savePhysicalInterface(e) {
+  e.preventDefault();
+  clearFormErrors("form-phys-iface");
+
+  const dev = document.getElementById("phys-dev").value.trim();
+  const role = document.getElementById("phys-role").value.trim();
+  const rawMethod = document.getElementById("phys-method").value.trim();
+  const method = (role === "lan" || role === "isolated") ? "manual" : rawMethod;
+
+  const ip = document.getElementById("phys-ip").value.trim();
+  const prefix = document.getElementById("phys-prefix").value.trim();
+  const gateway = document.getElementById("phys-gw").value.trim();
+  const dns = document.getElementById("phys-dns").value.trim();
 
   let hasError = false;
-  if (!Validators.isValidIPv4(ip)) {
-    setFieldError("wan-ip", "Valid IPv4 address is required.");
+  if (!Validators.isValidIfname(dev)) {
+    setFieldError("phys-dev", "Please select a valid network interface.");
     hasError = true;
   }
-  if (!Validators.isValidCIDR(prefix)) {
-    setFieldError("wan-prefix", "CIDR prefix must be between 1 and 32.");
+  if (!Validators.isValidRole(role)) {
+    setFieldError("phys-role", "Invalid interface role.");
     hasError = true;
   }
-  if (!Validators.isValidIPv4(gw)) {
-    setFieldError("wan-gw", "Valid IPv4 default gateway is required.");
+  if (!Validators.isValidMethod(method)) {
+    setFieldError("phys-method", "Invalid IPv4 configuration mode.");
     hasError = true;
   }
-  if (dns) {
-    const dnsList = dns.split(",").map(d => d.trim());
-    if (!dnsList.every(d => Validators.isValidIPv4(d))) {
-      setFieldError("wan-dns", "DNS servers must be comma-separated valid IPv4 addresses.");
+
+  if (role !== "unassigned" && method === "manual") {
+    if (!Validators.isValidIPv4(ip)) {
+      setFieldError("phys-ip", "Valid IPv4 address is required.");
       hasError = true;
+    }
+    if (!Validators.isValidCIDR(prefix)) {
+      setFieldError("phys-prefix", "CIDR prefix must be between 8 and 30.");
+      hasError = true;
+    }
+    if (role === "wan") {
+      if (!Validators.isValidIPv4(gateway)) {
+        setFieldError("phys-gw", "Valid IPv4 default gateway is required for static WAN.");
+        hasError = true;
+      }
+      if (dns && !Validators.isValidDNSList(dns)) {
+        setFieldError("phys-dns", "DNS servers must be comma-separated valid IPv4 addresses.");
+        hasError = true;
+      }
     }
   }
 
   if (hasError) {
-    showAlert("Please correct the errors in the WAN form.", true);
+    showAlert("Please correct the errors in the Physical Interface form.", true);
     return;
   }
 
-  const dnsArg = dns ? dns.split(",").map(d => d.trim()).join(" ") : "1.1.1.1 9.9.9.9";
-  const cmd = ["nmcli", "connection", "modify", "WAN", "ipv4.method", "manual", "ipv4.addresses", `${ip}/${prefix}`, "ipv4.gateway", gw, "ipv4.dns", dnsArg];
+  const existing = state.physicalIfaces.find(p => p.dev === dev);
+  if ((existing && existing.role === "lan") || role === "lan") {
+    const newTarget = role === "lan" ? `https://${ip}:9090` : "another LAN interface";
+    const confirmMsg = `Applying changes to ${dev} (${role.toUpperCase()}). If you are currently connected via ${dev}, your browser session may disconnect and you may need to reconnect at ${newTarget}.\n\nProceed?`;
+    if (!confirm(confirmMsg)) return;
+  }
 
-  cockpit.spawn(cmd, { superuser: "require" })
-    .then(() => cockpit.spawn(["nmcli", "connection", "up", "WAN"], { superuser: "require" }))
+  const updatedEntry = {
+    dev,
+    role,
+    method: role === "unassigned" ? "auto" : method,
+    ip: (role !== "unassigned" && method === "manual") ? ip : "",
+    prefix: (role !== "unassigned" && method === "manual") ? parseInt(prefix, 10) : 24,
+    gateway: (role === "wan" && method === "manual") ? gateway : "",
+    dns: (role === "wan" && method === "manual" && dns)
+      ? dns.split(",").map(d => d.trim()).filter(Boolean).join(",")
+      : "",
+    liveIp: existing ? existing.liveIp : "",
+    livePrefix: existing ? existing.livePrefix : 24,
+    operstate: existing ? existing.operstate : "UP",
+    mac: existing ? existing.mac : "--"
+  };
+
+  if (!isValidPhysIfaceObject(updatedEntry)) {
+    showAlert("Interface configuration failed security validation.", true);
+    return;
+  }
+
+  const idx = state.physicalIfaces.findIndex(p => p.dev === dev);
+  if (idx >= 0) {
+    state.physicalIfaces[idx] = updatedEntry;
+  } else {
+    state.physicalIfaces.push(updatedEntry);
+  }
+
+  applyPhysicalInterfaceConfig(updatedEntry)
+    .then(() => savePhysicalFirewallAndDns())
     .then(() => {
-      showAlert("Static WAN configuration saved and connection activated.");
-      loadWanConfig();
+      showAlert(`Interface ${dev} configured as ${role.toUpperCase()} and firewall/DNS rules updated.`);
       loadInterfaces();
     })
     .catch(err => {
-      showAlert("Failed to apply static WAN: " + (err.message || err), true);
+      showAlert(`Failed to apply configuration for ${dev}: ` + (err.message || err), true);
+      loadInterfaces();
     });
 }
 
-// ============================================================================
-// LAN Configuration
-// ============================================================================
-function loadLanConfig() {
-  cockpit.spawn(["nmcli", "-t", "-f", "ipv4.addresses", "connection", "show", "LAN"])
-    .then(text => {
-      const line = text.trim();
-      if (line && line.includes("/")) {
-        const [ip, prefix] = line.split("/");
-        state.lan.ip = ip;
-        state.lan.prefix = parseInt(prefix, 10) || 24;
-        document.getElementById("lan-ip").value = ip;
-        document.getElementById("lan-prefix").value = state.lan.prefix;
-      }
-    })
-    .catch(() => {
-      document.getElementById("lan-ip").value = "192.168.1.1";
-      document.getElementById("lan-prefix").value = "24";
-    });
+function applyPhysicalInterfaceConfig(entry) {
+  const dev = entry.dev;
+  const conName = entry.role === "wan"
+    ? `WAN-${dev}`
+    : entry.role === "lan"
+    ? `LAN-${dev}`
+    : `DMZ-${dev}`;
+
+  // Clean up any legacy wildcard match or previous per-device connections on this NIC
+  const cleanupCmds = [
+    ["nmcli", "connection", "delete", `WAN-${dev}`],
+    ["nmcli", "connection", "delete", `LAN-${dev}`],
+    ["nmcli", "connection", "delete", `DMZ-${dev}`]
+  ];
+
+  // Clear wildcard match.interface-name on stock WAN / LAN profiles if we are reassigning default NICs
+  let chain = Promise.resolve();
+  if (["ens18", "eth0", "enp1s0"].includes(dev) && entry.role !== "wan") {
+    chain = chain.then(() =>
+      cockpit.spawn(["nmcli", "connection", "delete", "WAN"], { superuser: "require" }).catch(() => {})
+    );
+  }
+  if (["ens19", "eth1", "enp2s0"].includes(dev) && entry.role !== "lan") {
+    chain = chain.then(() =>
+      cockpit.spawn(["nmcli", "connection", "delete", "LAN"], { superuser: "require" }).catch(() => {})
+    );
+  }
+
+  cleanupCmds.forEach(cmd => {
+    chain = chain.then(() => cockpit.spawn(cmd, { superuser: "require" }).catch(() => {}));
+  });
+
+  if (entry.role === "unassigned") {
+    return chain.then(() =>
+      cockpit.spawn(["nmcli", "device", "disconnect", dev], { superuser: "require" }).catch(() => {})
+    );
+  }
+
+  if (entry.role === "wan" && entry.method === "auto") {
+    return chain
+      .then(() =>
+        cockpit.spawn([
+          "nmcli", "connection", "add",
+          "type", "ethernet",
+          "con-name", conName,
+          "ifname", dev,
+          "ipv4.method", "auto",
+          "ipv6.method", "auto"
+        ], { superuser: "require" })
+      )
+      .then(() => cockpit.spawn(["nmcli", "connection", "up", conName], { superuser: "require" }));
+  }
+
+  if (entry.role === "wan" && entry.method === "manual") {
+    const dnsArg = entry.dns ? entry.dns.split(",").map(d => d.trim()).join(" ") : "1.1.1.1 9.9.9.9";
+    return chain
+      .then(() =>
+        cockpit.spawn([
+          "nmcli", "connection", "add",
+          "type", "ethernet",
+          "con-name", conName,
+          "ifname", dev,
+          "ipv4.method", "manual",
+          "ipv4.addresses", `${entry.ip}/${entry.prefix}`,
+          "ipv4.gateway", entry.gateway,
+          "ipv4.dns", dnsArg,
+          "ipv6.method", "auto"
+        ], { superuser: "require" })
+      )
+      .then(() => cockpit.spawn(["nmcli", "connection", "up", conName], { superuser: "require" }));
+  }
+
+  // LAN or Isolated / DMZ (Static IPv4)
+  return chain
+    .then(() =>
+      cockpit.spawn([
+        "nmcli", "connection", "add",
+        "type", "ethernet",
+        "con-name", conName,
+        "ifname", dev,
+        "ipv4.method", "manual",
+        "ipv4.addresses", `${entry.ip}/${entry.prefix}`,
+        "ipv6.method", "ignore"
+      ], { superuser: "require" })
+    )
+    .then(() => cockpit.spawn(["nmcli", "connection", "up", conName], { superuser: "require" }));
 }
 
-function saveLanConfig(e) {
-  e.preventDefault();
-  clearFormErrors("form-lan");
-
-  const ip = document.getElementById("lan-ip").value.trim();
-  const prefix = document.getElementById("lan-prefix").value.trim();
-
-  let hasError = false;
-  if (!Validators.isValidIPv4(ip)) {
-    setFieldError("lan-ip", "Valid IPv4 address is required (e.g. 192.168.1.1).");
-    hasError = true;
-  }
-  if (!Validators.isValidCIDR(prefix)) {
-    setFieldError("lan-prefix", "CIDR prefix must be between 8 and 30.");
-    hasError = true;
+function savePhysicalFirewallAndDns() {
+  for (const p of state.physicalIfaces) {
+    if (!isValidPhysIfaceObject(p)) {
+      return Promise.reject(new Error("Invalid physical interface object rejected during serialization."));
+    }
   }
 
-  if (hasError) {
-    showAlert("Please correct the LAN configuration errors.", true);
-    return;
-  }
+  const wanDevs = state.physicalIfaces
+    .filter(p => p.role === "wan")
+    .map(p => sanitizeString(p.dev, 15));
+  const lanDevs = state.physicalIfaces
+    .filter(p => p.role === "lan")
+    .map(p => sanitizeString(p.dev, 15));
+  const isolatedDevs = state.physicalIfaces
+    .filter(p => p.role === "isolated");
 
-  const confirmMsg = `Are you sure you want to change the router LAN IP to ${ip}/${prefix}?\n\nWARNING: Your current browser session will disconnect. You must reconnect at https://${ip}:9090.`;
-  if (!confirm(confirmMsg)) return;
+  // nftables sets cannot be empty; fall back to default names if none assigned
+  const wanSetItems = (wanDevs.length > 0 ? wanDevs : ["eth0", "ens18", "enp1s0"])
+    .map(d => `"${d}"`)
+    .join(", ");
+  const lanSetItems = (lanDevs.length > 0 ? lanDevs : ["eth1", "ens19", "enp2s0"])
+    .map(d => `"${d}"`)
+    .join(", ");
 
-  cockpit.spawn(["nmcli", "connection", "modify", "LAN", "ipv4.addresses", `${ip}/${prefix}`], { superuser: "require" })
-    .then(() => cockpit.spawn(["nmcli", "connection", "up", "LAN"], { superuser: "require" }))
-    .then(() => {
-      showAlert(`LAN updated to ${ip}/${prefix}. Please reconnect at https://${ip}:9090.`);
-      state.lan.ip = ip;
-      state.lan.prefix = parseInt(prefix, 10);
-    })
-    .catch(err => {
-      showAlert("Failed to update LAN connection: " + (err.message || err), true);
+  const serializedMeta = state.physicalIfaces.map(p => ({
+    dev: p.dev,
+    role: p.role,
+    method: p.method,
+    ip: p.ip || "",
+    prefix: p.prefix || 24,
+    gateway: p.gateway || "",
+    dns: p.dns || ""
+  }));
+
+  const ifacesNftContent = `# Azureclaw Dynamic Interface Definitions
+# Managed by Cockpit Azureclaw
+# JSON_IFACES: ${JSON.stringify(serializedMeta)}
+
+define WAN_IFACES = { ${wanSetItems} }
+define LAN_IFACES = { ${lanSetItems} }
+`;
+
+  // Isolated / DMZ physical interfaces: allow DNS (53) & DHCP (67) and WAN egress, block LAN & Router Mgmt
+  const isoInputRules = [];
+  const isoForwardRules = [];
+  isolatedDevs.forEach(p => {
+    const safeDev = sanitizeString(p.dev, 15);
+    isoInputRules.push(`        iifname "${safeDev}" udp dport { 53, 67 } accept comment "Isolated ${safeDev} DHCP/DNS"`);
+    isoInputRules.push(`        iifname "${safeDev}" tcp dport 53 accept comment "Isolated ${safeDev} DNS"`);
+    isoForwardRules.push(`        iifname "${safeDev}" oifname $WAN_IFACES accept comment "Isolated ${safeDev} WAN Egress"`);
+  });
+
+  const isolatedNftContent = `# Azureclaw Isolated Physical Interfaces Ruleset
+# Managed by Cockpit Azureclaw
+
+table inet router {
+    chain input {
+${isoInputRules.join("\n")}
+    }
+
+    chain forward {
+${isoForwardRules.join("\n")}
+    }
+}
+`;
+
+  // Dnsmasq interface bindings (/etc/dnsmasq.d/10-interfaces.conf)
+  const dnsLines = [
+    "# Azureclaw Dynamic Interface Bindings (Managed by Cockpit)",
+    "# DO NOT EDIT DIRECTLY IF USING COCKPIT GUI",
+    ""
+  ];
+  (wanDevs.length > 0 ? wanDevs : ["eth0", "ens18", "enp1s0"]).forEach(d => {
+    dnsLines.push(`except-interface=${d}`);
+  });
+  state.physicalIfaces
+    .filter(p => (p.role === "lan" || p.role === "isolated") && Validators.isValidIPv4(p.ip))
+    .forEach(p => {
+      dnsLines.push(`listen-address=${p.ip.trim()}`);
     });
+  dnsLines.push("");
+
+  const nftIfacesFile = cockpit.file(IFACES_NFT_FILE, { superuser: "try" });
+  const nftIsoFile = cockpit.file(ISOLATED_NFT_FILE, { superuser: "try" });
+  const dnsIfacesFile = cockpit.file(IFACES_DNS_FILE, { superuser: "try" });
+
+  return Promise.all([
+    nftIfacesFile.replace(ifacesNftContent),
+    nftIsoFile.replace(isolatedNftContent),
+    dnsIfacesFile.replace(dnsLines.join("\n"))
+  ])
+    .then(() => cockpit.spawn(["nft", "-c", "-f", "/etc/nftables/nftables.conf"], { superuser: "require" }))
+    .then(() => cockpit.spawn(["dnsmasq", "--test"], { superuser: "require" }))
+    .then(() => cockpit.spawn(["systemctl", "reload", "nftables"], { superuser: "require" }))
+    .then(() => cockpit.spawn(["systemctl", "reload", "dnsmasq"], { superuser: "require" }));
 }
 
 // ============================================================================
@@ -726,10 +1256,12 @@ function loadVlans() {
         }
       }
       renderVlans();
+      updateDHCPOptionScopeSelect();
     })
     .catch(() => {
       state.vlans = [];
       renderVlans();
+      updateDHCPOptionScopeSelect();
     });
 }
 
@@ -880,6 +1412,7 @@ function addVlan(e) {
       document.getElementById("vlan-opt-dhcp").checked = true;
       document.getElementById("vlan-dhcp-fields").style.display = "flex";
       renderVlans();
+      updateDHCPOptionScopeSelect();
       loadInterfaces();
     })
     .catch(err => {
@@ -903,6 +1436,7 @@ function deleteVlan(idx, conName) {
     .then(() => {
       showAlert(`${conName} removed.`);
       renderVlans();
+      updateDHCPOptionScopeSelect();
       loadInterfaces();
     })
     .catch(err => {
@@ -989,12 +1523,13 @@ ${forwardRules.join("\n")}
 }
 
 // ============================================================================
-// DHCP Scopes & Custom Options
+// DHCP Scopes & Custom Options (Multi-Scope Support)
 // ============================================================================
 const DHCP_FILE = "/etc/dnsmasq.d/30-dhcp.conf";
 
 function isValidDHCPScopeObject(s) {
   if (!s || typeof s !== "object") return false;
+  if (s.iface && !Validators.isValidIfname(s.iface)) return false;
   if (!Validators.isValidIPv4(s.rangeStart)) return false;
   if (!Validators.isValidIPv4(s.rangeEnd)) return false;
   if (!Validators.isValidIPv4(s.netmask)) return false;
@@ -1023,8 +1558,15 @@ function loadDHCPScopeAndOptions() {
         if (match) {
           try {
             const parsed = JSON.parse(match[1]);
-            if (parsed.lanScope && isValidDHCPScopeObject(parsed.lanScope)) {
-              state.dhcpScope = Object.assign({}, state.dhcpScope, parsed.lanScope);
+            if (Array.isArray(parsed.scopes)) {
+              const validScopes = parsed.scopes.filter(isValidDHCPScopeObject);
+              if (validScopes.length > 0) {
+                state.dhcpScopes = validScopes;
+              }
+            } else if (parsed.lanScope && isValidDHCPScopeObject(parsed.lanScope)) {
+              state.dhcpScopes = [
+                Object.assign({ iface: "ens19" }, parsed.lanScope)
+              ];
             }
             if (Array.isArray(parsed.customOptions)) {
               state.dhcpOptions = parsed.customOptions.filter(isValidDHCPOptionObject);
@@ -1032,41 +1574,132 @@ function loadDHCPScopeAndOptions() {
           } catch(e) {}
         }
       }
-      populateDHCPScopeForm();
+      renderDHCPScopesTable();
+      const ifaceSelect = document.getElementById("dhcp-scope-iface");
+      populateDHCPScopeFormForIface(ifaceSelect ? ifaceSelect.value : "ens19");
+      updateDHCPOptionScopeSelect();
       renderDHCPOptions();
     })
     .catch(() => {
-      populateDHCPScopeForm();
+      renderDHCPScopesTable();
+      const ifaceSelect = document.getElementById("dhcp-scope-iface");
+      populateDHCPScopeFormForIface(ifaceSelect ? ifaceSelect.value : "ens19");
+      updateDHCPOptionScopeSelect();
       renderDHCPOptions();
     });
 }
 
-function populateDHCPScopeForm() {
-  const s = state.dhcpScope;
-  document.getElementById("dhcp-scope-enabled").checked = s.enabled !== false;
-  document.getElementById("dhcp-range-start").value = s.rangeStart || "192.168.1.50";
-  document.getElementById("dhcp-range-end").value = s.rangeEnd || "192.168.1.200";
-  document.getElementById("dhcp-netmask").value = s.netmask || "255.255.255.0";
-  document.getElementById("dhcp-lease-time").value = s.leaseTime || "24h";
-  document.getElementById("dhcp-opt-gw").value = s.gateway || "192.168.1.1";
-  document.getElementById("dhcp-opt-dns").value = s.dns || "192.168.1.1";
-  document.getElementById("dhcp-opt-domain").value = s.domain || "home.arpa";
+function populateDHCPScopeFormForIface(ifaceName) {
+  const targetIface = ifaceName || "ens19";
+  const existing = state.dhcpScopes.find(s => s.iface === targetIface) ||
+                   (state.dhcpScopes.length === 1 && !state.dhcpScopes[0].iface ? state.dhcpScopes[0] : null);
+
+  if (existing) {
+    document.getElementById("dhcp-scope-enabled").checked = existing.enabled !== false;
+    document.getElementById("dhcp-range-start").value = existing.rangeStart || "192.168.1.50";
+    document.getElementById("dhcp-range-end").value = existing.rangeEnd || "192.168.1.200";
+    document.getElementById("dhcp-netmask").value = existing.netmask || "255.255.255.0";
+    document.getElementById("dhcp-lease-time").value = existing.leaseTime || "24h";
+    document.getElementById("dhcp-opt-gw").value = existing.gateway || "192.168.1.1";
+    document.getElementById("dhcp-opt-dns").value = existing.dns || "192.168.1.1";
+    document.getElementById("dhcp-opt-domain").value = existing.domain || "home.arpa";
+    return;
+  }
+
+  // Suggest subnet defaults from the selected physical interface's IP address
+  const phys = state.physicalIfaces.find(p => p.dev === targetIface);
+  const baseIp = (phys && Validators.isValidIPv4(phys.ip)) ? phys.ip : "192.168.1.1";
+  const octets = baseIp.split(".");
+  const prefixOctets = `${octets[0]}.${octets[1]}.${octets[2]}`;
+  const netmask = phys && phys.prefix ? prefixToNetmask(phys.prefix) : "255.255.255.0";
+
+  document.getElementById("dhcp-scope-enabled").checked = true;
+  document.getElementById("dhcp-range-start").value = `${prefixOctets}.50`;
+  document.getElementById("dhcp-range-end").value = `${prefixOctets}.200`;
+  document.getElementById("dhcp-netmask").value = netmask;
+  document.getElementById("dhcp-lease-time").value = "24h";
+  document.getElementById("dhcp-opt-gw").value = baseIp;
+  document.getElementById("dhcp-opt-dns").value = baseIp;
+  document.getElementById("dhcp-opt-domain").value = "home.arpa";
+}
+
+function renderDHCPScopesTable() {
+  const tbody = document.getElementById("table-dhcp-scopes-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (state.dhcpScopes.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state">No DHCP scopes configured.</td></tr>`;
+    return;
+  }
+
+  state.dhcpScopes.forEach((s, idx) => {
+    const ifaceLabel = s.iface || "ens19";
+    const statusClass = s.enabled !== false ? "status-active" : "status-inactive";
+    const statusText = s.enabled !== false ? "Enabled" : "Disabled";
+
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${escapeHtml(ifaceLabel)}</strong></td>
+      <td><code>${escapeHtml(s.rangeStart)} - ${escapeHtml(s.rangeEnd)}</code><br><small style="color: #6a6e73;">Mask: ${escapeHtml(s.netmask)}</small></td>
+      <td><code>${escapeHtml(s.gateway || "--")}</code></td>
+      <td><code>${escapeHtml(s.dns || "--")}</code></td>
+      <td>${escapeHtml(s.leaseTime)}</td>
+      <td><span class="status-pill ${statusClass}">${statusText}</span></td>
+      <td style="display: flex; gap: 6px;">
+        <button type="button" class="btn btn-secondary btn-edit-scope" data-iface="${escapeHtml(ifaceLabel)}">Edit</button>
+        <button type="button" class="btn btn-danger btn-del-scope" data-idx="${idx}">Delete</button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  tbody.querySelectorAll(".btn-edit-scope").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const iface = btn.getAttribute("data-iface");
+      const select = document.getElementById("dhcp-scope-iface");
+      if (select) {
+        if (!Array.from(select.options).some(o => o.value === iface)) {
+          const opt = document.createElement("option");
+          opt.value = iface;
+          opt.textContent = iface;
+          select.appendChild(opt);
+        }
+        select.value = iface;
+      }
+      populateDHCPScopeFormForIface(iface);
+    });
+  });
+
+  tbody.querySelectorAll(".btn-del-scope").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const idx = parseInt(btn.getAttribute("data-idx"), 10);
+      state.dhcpScopes.splice(idx, 1);
+      writeAndApplyDHCPSettings();
+    });
+  });
 }
 
 function saveDHCPScope(e) {
   e.preventDefault();
   clearFormErrors("form-dhcp-scope");
 
+  const ifaceSelect = document.getElementById("dhcp-scope-iface");
+  const iface = ifaceSelect ? ifaceSelect.value.trim() : "ens19";
   const enabled = document.getElementById("dhcp-scope-enabled").checked;
   const rangeStart = document.getElementById("dhcp-range-start").value.trim();
   const rangeEnd = document.getElementById("dhcp-range-end").value.trim();
   const netmask = document.getElementById("dhcp-netmask").value.trim();
   const leaseTime = document.getElementById("dhcp-lease-time").value.trim() || "24h";
-  const gateway = document.getElementById("dhcp-opt-gw").value.trim() || state.lan.ip;
-  const dns = document.getElementById("dhcp-opt-dns").value.trim() || state.lan.ip;
+  const gateway = document.getElementById("dhcp-opt-gw").value.trim();
+  const dns = document.getElementById("dhcp-opt-dns").value.trim();
   const domain = document.getElementById("dhcp-opt-domain").value.trim() || "home.arpa";
 
   let hasError = false;
+  if (!Validators.isValidIfname(iface)) {
+    showAlert("Invalid target interface for DHCP scope.", true);
+    hasError = true;
+  }
   if (!Validators.isValidIPv4(rangeStart)) {
     setFieldError("dhcp-range-start", "Valid IPv4 start required.");
     hasError = true;
@@ -1103,7 +1736,8 @@ function saveDHCPScope(e) {
 
   const normalizedDns = dns ? dns.split(",").map(d => d.trim()).filter(Boolean).join(",") : "";
 
-  state.dhcpScope = {
+  const newScope = {
+    iface,
     enabled: Boolean(enabled),
     rangeStart,
     rangeEnd,
@@ -1113,6 +1747,13 @@ function saveDHCPScope(e) {
     dns: normalizedDns,
     domain
   };
+
+  const existingIdx = state.dhcpScopes.findIndex(s => s.iface === iface);
+  if (existingIdx >= 0) {
+    state.dhcpScopes[existingIdx] = newScope;
+  } else {
+    state.dhcpScopes.push(newScope);
+  }
 
   writeAndApplyDHCPSettings();
 }
@@ -1185,9 +1826,11 @@ function addDHCPOption(e) {
 
 function writeAndApplyDHCPSettings() {
   // Deep-validate before writing to dnsmasq configuration
-  if (!isValidDHCPScopeObject(state.dhcpScope)) {
-    showAlert("Invalid DHCP scope parameters rejected during serialization.", true);
-    return;
+  for (const s of state.dhcpScopes) {
+    if (!isValidDHCPScopeObject(s)) {
+      showAlert("Invalid DHCP scope parameters rejected during serialization.", true);
+      return;
+    }
   }
   for (const opt of state.dhcpOptions) {
     if (!isValidDHCPOptionObject(opt)) {
@@ -1197,7 +1840,8 @@ function writeAndApplyDHCPSettings() {
   }
 
   const jsonMetadata = {
-    lanScope: state.dhcpScope,
+    scopes: state.dhcpScopes,
+    lanScope: state.dhcpScopes[0] || null,
     customOptions: state.dhcpOptions
   };
 
@@ -1207,16 +1851,17 @@ function writeAndApplyDHCPSettings() {
     ""
   ];
 
-  if (state.dhcpScope.enabled) {
-    const s = state.dhcpScope;
+  state.dhcpScopes.forEach(s => {
+    if (!s.enabled) return;
+    const safeTag = sanitizeString(s.iface || "lan", 15);
     const safeDns = s.dns ? s.dns.split(",").map(d => d.trim()).filter(Boolean).join(",") : "";
-    lines.push("# Primary LAN DHCP Scope");
-    lines.push(`dhcp-range=${s.rangeStart.trim()},${s.rangeEnd.trim()},${s.netmask.trim()},${s.leaseTime.trim()}`);
-    if (s.gateway) lines.push(`dhcp-option=option:router,${s.gateway.trim()}`);
-    if (safeDns) lines.push(`dhcp-option=option:dns-server,${safeDns}`);
-    if (s.domain) lines.push(`dhcp-option=option:domain-name,${sanitizeString(s.domain, 253)}`);
+    lines.push(`# DHCP Scope for ${safeTag}`);
+    lines.push(`dhcp-range=set:${safeTag},${s.rangeStart.trim()},${s.rangeEnd.trim()},${s.netmask.trim()},${s.leaseTime.trim()}`);
+    if (s.gateway) lines.push(`dhcp-option=tag:${safeTag},option:router,${s.gateway.trim()}`);
+    if (safeDns) lines.push(`dhcp-option=tag:${safeTag},option:dns-server,${safeDns}`);
+    if (s.domain) lines.push(`dhcp-option=tag:${safeTag},option:domain-name,${sanitizeString(s.domain, 253)}`);
     lines.push("");
-  }
+  });
 
   if (state.dhcpOptions.length > 0) {
     lines.push("# Custom DHCP Options");
@@ -1233,11 +1878,14 @@ function writeAndApplyDHCPSettings() {
     .then(() => cockpit.spawn(["dnsmasq", "--test"], { superuser: "require" }))
     .then(() => cockpit.spawn(["systemctl", "reload", "dnsmasq"], { superuser: "require" }))
     .then(() => {
-      showAlert("DHCP scope and options applied successfully.");
+      showAlert("DHCP scopes and options applied successfully.");
+      renderDHCPScopesTable();
+      updateDHCPOptionScopeSelect();
       renderDHCPOptions();
     })
     .catch(err => {
       showAlert("Failed to apply DHCP configuration: " + (err.message || err), true);
+      renderDHCPScopesTable();
       renderDHCPOptions();
     });
 }
@@ -1894,13 +2542,9 @@ function saveDNSOverrides() {
 // Forms Setup & Event Listeners
 // ============================================================================
 function setupForms() {
-  // WAN Form
-  const formWan = document.getElementById("form-wan");
-  if (formWan) formWan.addEventListener("submit", saveWanConfig);
-
-  // LAN Form
-  const formLan = document.getElementById("form-lan");
-  if (formLan) formLan.addEventListener("submit", saveLanConfig);
+  // Physical Interface Form
+  const formPhys = document.getElementById("form-phys-iface");
+  if (formPhys) formPhys.addEventListener("submit", savePhysicalInterface);
 
   // VLAN Form
   const formVlan = document.getElementById("form-add-vlan");

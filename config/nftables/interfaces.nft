@@ -1,0 +1,7 @@
+# /etc/nftables/interfaces.nft
+# Azureclaw Interface Role Definitions (Managed by Cockpit or GitOps)
+# WAN interfaces: supports eth0, ens18 (Proxmox VirtIO default), enp1s0
+define WAN_IFACES = { "eth0", "ens18", "enp1s0" }
+
+# LAN interfaces: supports eth1, ens19 (Proxmox VirtIO default), enp2s0
+define LAN_IFACES = { "eth1", "ens19", "enp2s0" }

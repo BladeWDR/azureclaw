@@ -51,7 +51,7 @@ while read -r iface state addrs; do
     for ip in $addrs; do
         if [[ ! "$ip" =~ ^fe80: ]]; then
             clean_ips="${clean_ips:+$clean_ips, }$ip"
-            if [ "$role" = "LAN" ] && [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+            if [[ "$role" =~ ^LAN ]] && [[ "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+ ]]; then
                 lan_ip="${ip%%/*}"
             fi
         fi

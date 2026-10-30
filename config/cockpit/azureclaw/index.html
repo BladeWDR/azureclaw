@@ -448,83 +448,97 @@
 
   <!-- Tab 2: Interfaces & VLANs -->
   <div id="tab-interfaces" class="tab-content" style="display: none;">
-    <!-- WAN Interface -->
+    <!-- Physical Network Interfaces (Multi-NIC Role & Addressing Assignment) -->
     <div class="panel-card">
       <div class="panel-header">
         <div>
-          <h2>WAN Interface (Internet Uplink)</h2>
-          <div class="panel-desc">Configure WAN uplink addressing. Operates with strict Zero-WAN-Exposure stealth posture.</div>
+          <h2>Physical Network Interfaces</h2>
+          <div class="panel-desc">Assign roles (WAN, Trusted LAN, Isolated/DMZ, or Unassigned) and IPv4 addressing to any physical NIC on this router</div>
         </div>
-        <span class="badge-tag" id="wan-dev-badge">Device: detecting...</span>
-      </div>
-
-      <form id="form-wan" novalidate>
-        <div class="form-inline-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
-          <div class="form-group">
-            <label for="wan-method">Addressing Mode</label>
-            <select id="wan-method">
-              <option value="auto">DHCP Client (Automatic / ISP)</option>
-              <option value="manual">Static IPv4 Address</option>
-            </select>
-          </div>
-          <div class="form-group wan-static-input" style="display: none;">
-            <label for="wan-ip">Static IP Address</label>
-            <input type="text" id="wan-ip" placeholder="e.g. 203.0.113.10">
-            <div class="form-error-msg" id="wan-ip-err"></div>
-          </div>
-          <div class="form-group wan-static-input" style="display: none;">
-            <label for="wan-prefix">Prefix Length (CIDR)</label>
-            <input type="number" id="wan-prefix" placeholder="e.g. 24" min="1" max="32" value="24">
-            <div class="form-error-msg" id="wan-prefix-err"></div>
-          </div>
-          <div class="form-group wan-static-input" style="display: none;">
-            <label for="wan-gw">Default Gateway</label>
-            <input type="text" id="wan-gw" placeholder="e.g. 203.0.113.1">
-            <div class="form-error-msg" id="wan-gw-err"></div>
-          </div>
-          <div class="form-group wan-static-input" style="display: none;">
-            <label for="wan-dns">DNS Servers (comma separated)</label>
-            <input type="text" id="wan-dns" placeholder="e.g. 1.1.1.1, 9.9.9.9">
-            <div class="form-error-msg" id="wan-dns-err"></div>
-          </div>
-          <div class="form-group btn-group">
-            <button type="submit" class="btn btn-primary" id="btn-save-wan">Save WAN Settings</button>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <!-- LAN Interface -->
-    <div class="panel-card">
-      <div class="panel-header">
-        <div>
-          <h2>LAN Interface (Internal Network)</h2>
-          <div class="panel-desc">Primary private network gateway addressing</div>
-        </div>
-        <span class="badge-tag" id="lan-dev-badge">Device: detecting...</span>
       </div>
 
       <div class="callout-box callout-warning">
-        ⚠ <strong>Notice:</strong> Changing the router LAN IP address alters the gateway network. You will be disconnected from Cockpit and must reconnect at the new IP address (e.g. <code>https://&lt;new-ip&gt;:9090</code>) after renewing your client lease.
+        ⚠ <strong>Notice:</strong> Reassigning or changing the IP address of the LAN interface you are currently connected through will disconnect your browser session. You will need to reconnect at the new IP address (e.g. <code>https://&lt;new-ip&gt;:9090</code>) after renewing your client lease.
       </div>
 
-      <form id="form-lan" novalidate>
-        <div class="form-inline-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+      <!-- Configure Physical Interface Form -->
+      <form id="form-phys-iface" novalidate>
+        <div class="form-inline-grid" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));">
           <div class="form-group">
-            <label for="lan-ip">Router LAN IP Address</label>
-            <input type="text" id="lan-ip" placeholder="192.168.1.1" required>
-            <div class="form-error-msg" id="lan-ip-err"></div>
+            <label for="phys-dev">Physical Interface (NIC)</label>
+            <select id="phys-dev" required>
+              <option value="ens18">ens18</option>
+              <option value="ens19">ens19</option>
+            </select>
+            <div class="form-error-msg" id="phys-dev-err"></div>
           </div>
           <div class="form-group">
-            <label for="lan-prefix">Prefix Length (CIDR)</label>
-            <input type="number" id="lan-prefix" placeholder="24" min="8" max="30" value="24" required>
-            <div class="form-error-msg" id="lan-prefix-err"></div>
+            <label for="phys-role">Assigned Role / Zone</label>
+            <select id="phys-role" required>
+              <option value="wan">WAN (Internet Uplink)</option>
+              <option value="lan">LAN (Trusted Internal)</option>
+              <option value="isolated">Isolated / DMZ (Untrusted Subnet)</option>
+              <option value="unassigned">Unassigned (Disabled)</option>
+            </select>
+            <div class="form-error-msg" id="phys-role-err"></div>
+          </div>
+          <div class="form-group" id="phys-method-group">
+            <label for="phys-method">Addressing Mode</label>
+            <select id="phys-method">
+              <option value="auto">DHCP Client (Automatic / ISP)</option>
+              <option value="manual">Static IPv4 Address</option>
+            </select>
+            <div class="form-error-msg" id="phys-method-err"></div>
+          </div>
+          <div class="form-group phys-static-field" style="display: none;">
+            <label for="phys-ip">IPv4 Address</label>
+            <input type="text" id="phys-ip" placeholder="e.g. 192.168.1.1">
+            <div class="form-error-msg" id="phys-ip-err"></div>
+          </div>
+          <div class="form-group phys-static-field" style="display: none;">
+            <label for="phys-prefix">Subnet Prefix (CIDR)</label>
+            <input type="number" id="phys-prefix" placeholder="24" min="1" max="32" value="24">
+            <div class="form-error-msg" id="phys-prefix-err"></div>
+          </div>
+          <div class="form-group phys-wan-static-field" style="display: none;">
+            <label for="phys-gw">Default Gateway (WAN)</label>
+            <input type="text" id="phys-gw" placeholder="e.g. 203.0.113.1">
+            <div class="form-error-msg" id="phys-gw-err"></div>
+          </div>
+          <div class="form-group phys-wan-static-field" style="display: none;">
+            <label for="phys-dns">Upstream DNS (comma separated)</label>
+            <input type="text" id="phys-dns" placeholder="e.g. 1.1.1.1, 9.9.9.9">
+            <div class="form-error-msg" id="phys-dns-err"></div>
           </div>
           <div class="form-group btn-group">
-            <button type="submit" class="btn btn-primary" id="btn-save-lan">Save LAN Settings</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-phys" style="width: 100%;">Save Interface Settings</button>
           </div>
         </div>
       </form>
+
+      <!-- Physical Interfaces Table -->
+      <div class="table-container">
+        <table class="pf-c-table">
+          <thead>
+            <tr>
+              <th>Interface</th>
+              <th>MAC Address</th>
+              <th>Link</th>
+              <th>Assigned Role</th>
+              <th>Addressing</th>
+              <th>IPv4 / Subnet</th>
+              <th>Gateway / DNS</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-phys-ifaces-body">
+            <tr><td colspan="8" class="empty-state">Detecting physical network interfaces...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="form-hint" style="margin-top: 12px;">
+        Interface profiles are applied in NetworkManager, firewall zones in <code>/etc/nftables/interfaces.nft</code> &amp; <code>/etc/nftables.d/20-isolated-ifaces.nft</code>, and DNS/DHCP bindings in <code>/etc/dnsmasq.d/10-interfaces.conf</code>.
+      </div>
     </div>
 
     <!-- 802.1Q VLANs -->
@@ -635,23 +649,29 @@
 
   <!-- Tab 3: DHCP & DNS -->
   <div id="tab-dhcp" class="tab-content" style="display: none;">
-    <!-- LAN DHCP Scope -->
+    <!-- DHCP Scopes -->
     <div class="panel-card">
       <div class="panel-header">
         <div>
-          <h2>Primary LAN DHCP Scope & Options</h2>
-          <div class="panel-desc">Configure the address allocation pool, lease duration, and gateway/DNS options for the primary LAN</div>
+          <h2>DHCP Server Scopes &amp; Options</h2>
+          <div class="panel-desc">Configure address allocation pools, lease durations, and gateway/DNS options for LAN and Isolated physical interfaces</div>
         </div>
       </div>
 
       <form id="form-dhcp-scope" novalidate>
-        <div style="margin-bottom: 12px;">
-          <label class="checkbox-label">
-            <input type="checkbox" id="dhcp-scope-enabled" checked> Enable DHCP Server on LAN
+        <div style="margin-bottom: 12px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+          <label class="checkbox-label" style="margin-top: 0;">
+            <input type="checkbox" id="dhcp-scope-enabled" checked> Enable DHCP Scope
           </label>
         </div>
 
         <div class="form-inline-grid">
+          <div class="form-group">
+            <label for="dhcp-scope-iface">Target Interface / Subnet</label>
+            <select id="dhcp-scope-iface">
+              <option value="lan">Primary LAN (Default)</option>
+            </select>
+          </div>
           <div class="form-group">
             <label for="dhcp-range-start">Pool Start IP</label>
             <input type="text" id="dhcp-range-start" placeholder="192.168.1.50" required>
@@ -692,6 +712,26 @@
           </div>
         </div>
       </form>
+
+      <div class="table-container" style="margin-bottom: 12px;">
+        <table class="pf-c-table">
+          <thead>
+            <tr>
+              <th>Interface / Tag</th>
+              <th>Status</th>
+              <th>Pool Range</th>
+              <th>Subnet Mask</th>
+              <th>Lease</th>
+              <th>Gateway / DNS</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="table-dhcp-scopes-body">
+            <tr><td colspan="7" class="empty-state">Loading DHCP scopes...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <div class="form-hint">
         Scope parameters are saved to <code>/etc/dnsmasq.d/30-dhcp.conf</code> and verified with <code>dnsmasq --test</code> before reloading.
       </div>
