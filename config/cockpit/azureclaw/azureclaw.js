@@ -146,39 +146,197 @@ function switchTab(tabId) {
 }
 
 // ============================================================================
+// Form Validation UI Helpers
+// ============================================================================
+function setFieldError(fieldId, errorMsg) {
+  const inputEl = document.getElementById(fieldId);
+  const errEl = document.getElementById(fieldId + "-err");
+  if (inputEl) {
+    if (errorMsg) {
+      inputEl.classList.add("is-invalid");
+      inputEl.setAttribute("aria-invalid", "true");
+    } else {
+      inputEl.classList.remove("is-invalid");
+      inputEl.removeAttribute("aria-invalid");
+    }
+  }
+  if (errEl) {
+    if (errorMsg) {
+      errEl.textContent = errorMsg;
+      errEl.classList.add("visible");
+    } else {
+      errEl.textContent = "";
+      errEl.classList.remove("visible");
+    }
+  }
+}
+
+function clearFormErrors(formId) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+  form.querySelectorAll(".is-invalid").forEach(el => {
+    el.classList.remove("is-invalid");
+    el.removeAttribute("aria-invalid");
+  });
+  form.querySelectorAll(".form-error-msg").forEach(el => {
+    el.textContent = "";
+    el.classList.remove("visible");
+  });
+}
+
+const FieldValidators = {
+  // Port Forward fields
+  "pf-name"(val) {
+    if (!val || !val.trim()) return "Rule name is required.";
+    if (!Validators.isValidRuleName(val.trim())) {
+      return "Rule name must be alphanumeric (spaces, - and _ allowed, max 32 characters).";
+    }
+    return null;
+  },
+  "pf-proto"(val) {
+    if (!Validators.isValidProto(val)) {
+      return "Select TCP, UDP, or Both.";
+    }
+    return null;
+  },
+  "pf-wan-port"(val) {
+    if (!val || !String(val).trim()) return "WAN port is required.";
+    if (!Validators.isValidPort(String(val).trim())) {
+      return "Port must be an integer between 1 and 65535.";
+    }
+    return null;
+  },
+  "pf-lan-ip"(val) {
+    if (!val || !val.trim()) return "Target LAN IP is required.";
+    if (!Validators.isValidIPv4(val.trim())) {
+      return "Must be a valid IPv4 address (e.g. 192.168.1.100).";
+    }
+    return null;
+  },
+  "pf-lan-port"(val) {
+    if (val && String(val).trim() && !Validators.isValidPort(String(val).trim())) {
+      return "Port must be an integer between 1 and 65535.";
+    }
+    return null;
+  },
+
+  // DHCP Reservation fields
+  "res-name"(val) {
+    if (!val || !val.trim()) return "Hostname is required.";
+    if (!Validators.isValidHostname(val.trim())) {
+      return "Hostname must be RFC 1123 format (alphanumeric, hyphens, dots, max 63 chars).";
+    }
+    return null;
+  },
+  "res-mac"(val) {
+    if (!val || !val.trim()) return "MAC address is required.";
+    if (!Validators.isValidMAC(val.trim())) {
+      return "Invalid MAC format. Use 00:11:22:33:44:55 or 00-11-22-33-44-55.";
+    }
+    const mac = val.trim().toLowerCase().replace(/-/g, ":");
+    if (state.reservations.some(r => r.mac === mac)) {
+      return "A reservation for this MAC address already exists.";
+    }
+    return null;
+  },
+  "res-ip"(val) {
+    if (!val || !val.trim()) return "Reserved IP is required.";
+    if (!Validators.isValidIPv4(val.trim())) {
+      return "Must be a valid IPv4 address (e.g. 192.168.1.50).";
+    }
+    if (state.reservations.some(r => r.ip === val.trim())) {
+      return "A reservation for this IP address already exists.";
+    }
+    return null;
+  },
+
+  // DNS Override fields
+  "dns-domain"(val) {
+    if (!val || !val.trim()) return "Domain/hostname is required.";
+    if (!Validators.isValidHostname(val.trim())) {
+      return "Must be a valid hostname or domain (e.g. vault.home.arpa).";
+    }
+    const domain = val.trim().toLowerCase();
+    if (state.dnsOverrides.some(d => d.domain.toLowerCase() === domain)) {
+      return "A DNS override for this domain already exists.";
+    }
+    return null;
+  },
+  "dns-ip"(val) {
+    if (!val || !val.trim()) return "Target IP is required.";
+    if (!Validators.isValidIPv4(val.trim())) {
+      return "Must be a valid IPv4 address (e.g. 192.168.1.100).";
+    }
+    return null;
+  }
+};
+
+function validateField(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el || !FieldValidators[fieldId]) return true;
+  const errorMsg = FieldValidators[fieldId](el.value);
+  setFieldError(fieldId, errorMsg);
+  return errorMsg === null;
+}
+
+function attachValidationListeners(formId, fieldIds) {
+  const form = document.getElementById(formId);
+  if (!form) return;
+
+  fieldIds.forEach(fieldId => {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+
+    el.addEventListener("blur", () => {
+      if (el.value.trim().length > 0) {
+        validateField(fieldId);
+      }
+    });
+
+    el.addEventListener("input", () => {
+      if (el.classList.contains("is-invalid")) {
+        validateField(fieldId);
+      }
+    });
+  });
+}
+
+// ============================================================================
 // Form Event Handlers with Strict Validation
 // ============================================================================
 function setupForms() {
+  const pfFields = ["pf-name", "pf-proto", "pf-wan-port", "pf-lan-ip", "pf-lan-port"];
+  const resFields = ["res-name", "res-mac", "res-ip"];
+  const dnsFields = ["dns-domain", "dns-ip"];
+
+  attachValidationListeners("form-add-pf", pfFields);
+  attachValidationListeners("form-add-res", resFields);
+  attachValidationListeners("form-add-dns", dnsFields);
+
   // Add Port Forward
   document.getElementById("form-add-pf").addEventListener("submit", (e) => {
     e.preventDefault();
+
+    let allValid = true;
+    let firstInvalid = null;
+    pfFields.forEach(fieldId => {
+      if (!validateField(fieldId)) {
+        allValid = false;
+        if (!firstInvalid) firstInvalid = document.getElementById(fieldId);
+      }
+    });
+
+    if (!allValid) {
+      if (firstInvalid) firstInvalid.focus();
+      showAlert("Please correct the invalid field(s) highlighted in red.", true);
+      return;
+    }
+
     const rawName = document.getElementById("pf-name").value;
     const rawProto = document.getElementById("pf-proto").value;
     const rawWanPort = document.getElementById("pf-wan-port").value;
     const rawLanIp = document.getElementById("pf-lan-ip").value;
     const rawLanPort = document.getElementById("pf-lan-port").value || rawWanPort;
-
-    // Strict Validation
-    if (!Validators.isValidRuleName(rawName)) {
-      showAlert("Rule name must be alphanumeric (spaces, - and _ allowed), max 32 characters.", true);
-      return;
-    }
-    if (!Validators.isValidProto(rawProto)) {
-      showAlert("Invalid protocol specified. Must be TCP, UDP, or Both.", true);
-      return;
-    }
-    if (!Validators.isValidPort(rawWanPort)) {
-      showAlert("WAN port must be a valid integer between 1 and 65535.", true);
-      return;
-    }
-    if (!Validators.isValidIPv4(rawLanIp)) {
-      showAlert("LAN Target IP must be a valid IPv4 address (e.g. 192.168.1.100).", true);
-      return;
-    }
-    if (!Validators.isValidPort(rawLanPort)) {
-      showAlert("LAN destination port must be a valid integer between 1 and 65535.", true);
-      return;
-    }
 
     const name = sanitizeString(rawName, 32);
     const proto = rawProto.trim().toLowerCase();
@@ -189,59 +347,63 @@ function setupForms() {
     state.portForwards.push({ name, proto, wanPort, lanIp, lanPort });
     savePortForwards();
     e.target.reset();
+    clearFormErrors("form-add-pf");
   });
 
   // Add DHCP Reservation
   document.getElementById("form-add-res").addEventListener("submit", (e) => {
     e.preventDefault();
+
+    let allValid = true;
+    let firstInvalid = null;
+    resFields.forEach(fieldId => {
+      if (!validateField(fieldId)) {
+        allValid = false;
+        if (!firstInvalid) firstInvalid = document.getElementById(fieldId);
+      }
+    });
+
+    if (!allValid) {
+      if (firstInvalid) firstInvalid.focus();
+      showAlert("Please correct the invalid field(s) highlighted in red.", true);
+      return;
+    }
+
     const rawName = document.getElementById("res-name").value;
     const rawMac = document.getElementById("res-mac").value;
     const rawIp = document.getElementById("res-ip").value;
-
-    // Strict Validation
-    if (!Validators.isValidHostname(rawName)) {
-      showAlert("Hostname must be a valid RFC 1123 hostname (no spaces, quotes, or newlines).", true);
-      return;
-    }
-    if (!Validators.isValidMAC(rawMac)) {
-      showAlert("Invalid MAC address. Must be in format 00:11:22:33:44:55.", true);
-      return;
-    }
-    if (!Validators.isValidIPv4(rawIp)) {
-      showAlert("Invalid IP address. Must be a valid IPv4 address.", true);
-      return;
-    }
 
     const name = sanitizeString(rawName, 63);
     const mac = rawMac.trim().toLowerCase().replace(/-/g, ":");
     const ip = rawIp.trim();
 
-    // Check for duplicate MAC or IP
-    if (state.reservations.some(r => r.mac === mac)) {
-      showAlert("A reservation for this MAC address already exists.", true);
-      return;
-    }
-
     state.reservations.push({ name, mac, ip });
     saveReservations();
     e.target.reset();
+    clearFormErrors("form-add-res");
   });
 
   // Add DNS Override
   document.getElementById("form-add-dns").addEventListener("submit", (e) => {
     e.preventDefault();
+
+    let allValid = true;
+    let firstInvalid = null;
+    dnsFields.forEach(fieldId => {
+      if (!validateField(fieldId)) {
+        allValid = false;
+        if (!firstInvalid) firstInvalid = document.getElementById(fieldId);
+      }
+    });
+
+    if (!allValid) {
+      if (firstInvalid) firstInvalid.focus();
+      showAlert("Please correct the invalid field(s) highlighted in red.", true);
+      return;
+    }
+
     const rawDomain = document.getElementById("dns-domain").value;
     const rawIp = document.getElementById("dns-ip").value;
-
-    // Strict Validation
-    if (!Validators.isValidHostname(rawDomain)) {
-      showAlert("Domain must be a valid hostname/FQDN (no spaces, quotes, or newlines).", true);
-      return;
-    }
-    if (!Validators.isValidIPv4(rawIp)) {
-      showAlert("Target IP must be a valid IPv4 address.", true);
-      return;
-    }
 
     const domain = sanitizeString(rawDomain, 253);
     const ip = rawIp.trim();
@@ -249,6 +411,7 @@ function setupForms() {
     state.dnsOverrides.push({ domain, ip });
     saveDNSOverrides();
     e.target.reset();
+    clearFormErrors("form-add-dns");
   });
 }
 
@@ -379,6 +542,7 @@ function loadDHCPLeases() {
           const name = btn.getAttribute("data-name");
 
           switchTab("tab-dhcp-reservations");
+          clearFormErrors("form-add-res");
           document.getElementById("res-mac").value = mac;
           document.getElementById("res-ip").value = ip;
           document.getElementById("res-name").value = (name && name !== "Unknown Client") ? name : "";

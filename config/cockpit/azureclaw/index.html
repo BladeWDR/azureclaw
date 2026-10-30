@@ -158,6 +158,14 @@
       border: 1px solid var(--pf-global--BorderColor--100, #e0e0e0);
       border-radius: 4px;
     }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group.btn-group {
+      justify-content: flex-end;
+      padding-bottom: 2px;
+    }
     .form-group label {
       display: block;
       font-size: 12px;
@@ -174,6 +182,32 @@
       font-size: 14px;
       background-color: var(--pf-global--BackgroundColor--light-100, #ffffff);
       color: var(--pf-global--Color--100, #151515);
+      transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .form-group input:focus, .form-group select:focus {
+      outline: none;
+      border-color: var(--pf-global--active-color--100, #0066cc);
+      box-shadow: 0 0 0 1px var(--pf-global--active-color--100, #0066cc);
+    }
+    .form-group input.is-invalid, .form-group select.is-invalid {
+      border-color: var(--pf-global--danger-color--100, #c9190b) !important;
+      background-color: #fff8f7 !important;
+      box-shadow: 0 0 0 1px var(--pf-global--danger-color--100, #c9190b) !important;
+    }
+    .form-group input.is-invalid:focus, .form-group select.is-invalid:focus {
+      border-color: var(--pf-global--danger-color--100, #c9190b) !important;
+      box-shadow: 0 0 0 2px rgba(201, 25, 11, 0.3) !important;
+    }
+    .form-error-msg {
+      display: none;
+      color: var(--pf-global--danger-color--100, #c9190b);
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 4px;
+      line-height: 1.25;
+    }
+    .form-error-msg.visible {
+      display: block;
     }
     .btn {
       padding: 6px 14px;
@@ -333,11 +367,12 @@
       </div>
 
       <!-- Add Rule Form -->
-      <form id="form-add-pf">
+      <form id="form-add-pf" novalidate>
         <div class="form-inline-grid">
           <div class="form-group">
             <label for="pf-name">Rule Name / Service</label>
-            <input type="text" id="pf-name" placeholder="e.g. Plex Server" pattern="^[a-zA-Z0-9 _.-]{1,32}$" maxlength="32" required>
+            <input type="text" id="pf-name" placeholder="e.g. Plex Server" maxlength="32" required>
+            <div class="form-error-msg" id="pf-name-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-proto">Protocol</label>
@@ -346,20 +381,24 @@
               <option value="udp">UDP</option>
               <option value="both">TCP + UDP</option>
             </select>
+            <div class="form-error-msg" id="pf-proto-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-wan-port">WAN (External) Port</label>
             <input type="number" id="pf-wan-port" placeholder="e.g. 32400" min="1" max="65535" required>
+            <div class="form-error-msg" id="pf-wan-port-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-lan-ip">LAN Target IP</label>
-            <input type="text" id="pf-lan-ip" placeholder="e.g. 192.168.1.100" pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" required>
+            <input type="text" id="pf-lan-ip" placeholder="e.g. 192.168.1.100" required>
+            <div class="form-error-msg" id="pf-lan-ip-err"></div>
           </div>
           <div class="form-group">
             <label for="pf-lan-port">LAN (Internal) Port</label>
             <input type="number" id="pf-lan-port" placeholder="Same as WAN" min="1" max="65535">
+            <div class="form-error-msg" id="pf-lan-port-err"></div>
           </div>
-          <div class="form-group" style="align-self: flex-end;">
+          <div class="form-group btn-group">
             <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Rule</button>
           </div>
         </div>
@@ -396,21 +435,24 @@
       </div>
 
       <!-- Add Reservation Form -->
-      <form id="form-add-res">
+      <form id="form-add-res" novalidate>
         <div class="form-inline-grid">
           <div class="form-group">
             <label for="res-name">Hostname / Label</label>
-            <input type="text" id="res-name" placeholder="e.g. nas.home.arpa" pattern="^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$" maxlength="63" required>
+            <input type="text" id="res-name" placeholder="e.g. nas.home.arpa" maxlength="63" required>
+            <div class="form-error-msg" id="res-name-err"></div>
           </div>
           <div class="form-group">
             <label for="res-mac">MAC Address</label>
-            <input type="text" id="res-mac" placeholder="e.g. 00:11:22:33:44:55" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$" maxlength="17" required>
+            <input type="text" id="res-mac" placeholder="e.g. 00:11:22:33:44:55" maxlength="17" required>
+            <div class="form-error-msg" id="res-mac-err"></div>
           </div>
           <div class="form-group">
             <label for="res-ip">Reserved IP Address</label>
-            <input type="text" id="res-ip" placeholder="e.g. 192.168.1.50" pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" required>
+            <input type="text" id="res-ip" placeholder="e.g. 192.168.1.50" required>
+            <div class="form-error-msg" id="res-ip-err"></div>
           </div>
-          <div class="form-group" style="align-self: flex-end;">
+          <div class="form-group btn-group">
             <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Reservation</button>
           </div>
         </div>
@@ -445,17 +487,19 @@
       </div>
 
       <!-- Add DNS Override Form -->
-      <form id="form-add-dns">
+      <form id="form-add-dns" novalidate>
         <div class="form-inline-grid">
           <div class="form-group" style="grid-column: span 2;">
             <label for="dns-domain">Domain Name / Hostname</label>
-            <input type="text" id="dns-domain" placeholder="e.g. vault.home.arpa" pattern="^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$" maxlength="253" required>
+            <input type="text" id="dns-domain" placeholder="e.g. vault.home.arpa" maxlength="253" required>
+            <div class="form-error-msg" id="dns-domain-err"></div>
           </div>
           <div class="form-group" style="grid-column: span 2;">
             <label for="dns-ip">Target IP Address</label>
-            <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.100" pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" required>
+            <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.100" required>
+            <div class="form-error-msg" id="dns-ip-err"></div>
           </div>
-          <div class="form-group" style="align-self: flex-end;">
+          <div class="form-group btn-group">
             <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Host</button>
           </div>
         </div>
