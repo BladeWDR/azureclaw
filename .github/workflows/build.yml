@@ -62,6 +62,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
             type=sha,format=short,prefix=sha-
             type=ref,event=tag
 
@@ -88,9 +89,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Lowercase image repository name
+      - name: Lowercase image repository name & resolve target tag
         run: |
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "TARGET_TAG=latest" >> $GITHUB_ENV
+          else
+            SAFE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-')
+            echo "TARGET_TAG=${SAFE_TAG}" >> $GITHUB_ENV
+          fi
 
       - name: Free up runner disk space
         run: |
@@ -108,7 +115,7 @@ jobs:
           sudo mkdir -p /var/lib/containers/storage
           echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
           echo "==> Pulling target image into host container storage..."
-          sudo podman pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          sudo podman pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TARGET_TAG }}"
 
       - name: Generate QCOW2 image with bootc-image-builder
         run: |
@@ -124,7 +131,7 @@ jobs:
             --type qcow2 \
             --target-arch x86_64 \
             --local \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" || [ -f "$(pwd)/output/qcow2_build/qcow2/disk.qcow2" ]
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TARGET_TAG }}" || [ -f "$(pwd)/output/qcow2_build/qcow2/disk.qcow2" ]
 
           sudo chown -R "$(id -u):$(id -g)" output/qcow2_build
 
@@ -161,9 +168,15 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Lowercase image repository name
+      - name: Lowercase image repository name & resolve target tag
         run: |
           echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "TARGET_TAG=latest" >> $GITHUB_ENV
+          else
+            SAFE_TAG=$(echo "${{ github.ref_name }}" | tr '/' '-')
+            echo "TARGET_TAG=${SAFE_TAG}" >> $GITHUB_ENV
+          fi
 
       - name: Free up runner disk space
         run: |
@@ -176,7 +189,7 @@ jobs:
           sudo mkdir -p /var/lib/containers/storage
           echo "${{ secrets.GITHUB_TOKEN }}" | sudo podman login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
           echo "==> Pulling target image into host container storage..."
-          sudo podman pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          sudo podman pull "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TARGET_TAG }}"
 
       - name: Generate Baremetal ISO installer with bootc-image-builder
         run: |
@@ -192,7 +205,7 @@ jobs:
             --type anaconda-iso \
             --target-arch x86_64 \
             --local \
-            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" || [ -f "$(pwd)/output/iso_build/bootiso/install.iso" ]
+            "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.TARGET_TAG }}" || [ -f "$(pwd)/output/iso_build/bootiso/install.iso" ]
 
           sudo chown -R "$(id -u):$(id -g)" output/iso_build
 
