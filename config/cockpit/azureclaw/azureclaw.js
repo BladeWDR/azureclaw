@@ -162,10 +162,11 @@ function setFieldError(fieldId, errorMsg) {
   }
   if (errEl) {
     if (errorMsg) {
-      errEl.textContent = errorMsg;
+      errEl.innerHTML = `<span style="color: #c9190b !important; font-weight: 600; font-size: 12px; display: inline-block;">⚠ ${escapeHtml(errorMsg)}</span>`;
+      errEl.style.setProperty("color", "#c9190b", "important");
       errEl.classList.add("visible");
     } else {
-      errEl.textContent = "";
+      errEl.innerHTML = "";
       errEl.classList.remove("visible");
     }
   }
