@@ -40,6 +40,7 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         cockpit-ws \
         cockpit-system \
         cockpit-networkmanager \
+        cockpit-files \
         iproute \
         iptables-nft \
         conntrack-tools \
@@ -91,6 +92,7 @@ COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
 COPY config/profile.d/99-azureclaw-status.sh /etc/profile.d/99-azureclaw-status.sh
 COPY config/network/99-azureclaw-issue.sh /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh
+COPY config/cockpit/azureclaw/ /usr/share/cockpit/azureclaw/
 
 # 4. Secure File Permissions & Group Memberships
 # NetworkManager strictly requires 0600 on connection keyfiles
@@ -117,6 +119,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0755 /usr/libexec/azureclaw/router-status.sh && \
     chmod 0644 /etc/profile.d/99-azureclaw-status.sh && \
     chmod 0755 /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh && \
+    chmod -R 0755 /usr/share/cockpit/azureclaw && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
     echo "session optional pam_exec.so seteuid /usr/libexec/azureclaw/firstboot-cleanup.sh" >> /etc/pam.d/postlogin && \
     mkdir -p /var/lib/alloy && \

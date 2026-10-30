@@ -55,6 +55,8 @@ azureclaw/
 │   │   └── alloy.sysconfig            # Environment variables and listen port configuration
 │   ├── bootc/
 │   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (DPS, ext4 rootfs)
+│   ├── cockpit/
+│   │   └── azureclaw/                 # Native Cockpit UI plugin (port forwards, DHCP, DNS overrides)
 │   ├── ssh/
 │   │   └── 99-hardening.conf          # Hardened SSH daemon config (keys only, modern ciphers)
 │   ├── sysctl.d/
