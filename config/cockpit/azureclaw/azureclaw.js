@@ -113,13 +113,68 @@ const Validators = {
     const validHost = Validators.isValidIPv4(host) || Validators.isValidHostname(host);
     const validPort = Validators.isValidPort(port);
     return validHost && validPort;
+  },
+
+  isValidIfname(name) {
+    if (!name || typeof name !== "string") return false;
+    return /^[a-zA-Z][a-zA-Z0-9_-]{0,14}$/.test(name.trim());
+  },
+
+  isValidIPv4CIDR(cidr, allowZeroPrefix = false) {
+    if (!cidr || typeof cidr !== "string") return false;
+    const parts = cidr.trim().split("/");
+    if (parts.length !== 2) return false;
+    if (!Validators.isValidIPv4(parts[0])) return false;
+    const pStr = String(parts[1]).trim();
+    if (!/^\d{1,2}$/.test(pStr)) return false;
+    const p = parseInt(pStr, 10);
+    const min = allowZeroPrefix ? 0 : 1;
+    return Number.isInteger(p) && p >= min && p <= 32 && String(p) === pStr;
+  },
+
+  isValidAllowedIPs(allowedIps) {
+    if (!allowedIps || typeof allowedIps !== "string") return false;
+    const list = allowedIps.split(",").map(s => s.trim()).filter(Boolean);
+    if (list.length === 0 || list.length > 32) return false;
+    return list.every(item => Validators.isValidIPv4CIDR(item, true));
+  },
+
+  isValidKeepalive(val) {
+    if (val === undefined || val === null || val === "") return true;
+    const str = String(val).trim();
+    if (!/^\d{1,4}$/.test(str)) return false;
+    const num = parseInt(str, 10);
+    return Number.isInteger(num) && num >= 0 && num <= 3600 && String(num) === str;
+  },
+
+  isValidDNSList(dns) {
+    if (!dns || typeof dns !== "string") return false;
+    const list = dns.split(",").map(d => d.trim()).filter(Boolean);
+    if (list.length === 0 || list.length > 8) return false;
+    return list.every(d => Validators.isValidIPv4(d));
+  },
+
+  isValidDHCPOptionCode(code) {
+    if (!code || typeof code !== "string") return false;
+    return /^[a-zA-Z0-9_-]{1,32}$/.test(code.trim());
+  },
+
+  isValidDHCPOptionVal(val) {
+    if (!val || typeof val !== "string") return false;
+    return /^[a-zA-Z0-9_.,:/-]{1,128}$/.test(val.trim());
+  },
+
+  isValidDHCPScopeTag(tag) {
+    if (tag === undefined || tag === null || tag === "") return true;
+    if (typeof tag !== "string") return false;
+    return /^[a-zA-Z0-9_-]{1,32}$/.test(tag.trim());
   }
 };
 
 function sanitizeString(str, maxLen = 64) {
   if (!str) return "";
   return String(str)
-    .replace(/[\r\n\t\0;'"$`\\{}()[\]]/g, "")
+    .replace(/[\r\n\t\0;'"$`\\{}()[\]#]/g, "")
     .trim()
     .slice(0, maxLen);
 }
@@ -639,6 +694,21 @@ function saveLanConfig(e) {
 const VLAN_NFT_FILE = "/etc/nftables.d/40-vlans.nft";
 const VLAN_DNS_FILE = "/etc/dnsmasq.d/40-vlans.conf";
 
+function isValidVlanObject(v) {
+  if (!v || typeof v !== "object") return false;
+  if (!Validators.isValidVlanId(v.id)) return false;
+  if (!Validators.isValidRuleName(v.name)) return false;
+  if (!Validators.isValidIfname(v.parent)) return false;
+  if (!Validators.isValidIPv4(v.ip)) return false;
+  if (!Validators.isValidCIDR(v.prefix)) return false;
+  if (v.dhcp) {
+    if (!Validators.isValidIPv4(v.dhcpStart)) return false;
+    if (!Validators.isValidIPv4(v.dhcpEnd)) return false;
+    if (!Validators.isValidLeaseTime(v.dhcpLease)) return false;
+  }
+  return true;
+}
+
 function loadVlans() {
   const file = cockpit.file(VLAN_NFT_FILE);
   file.read()
@@ -649,11 +719,9 @@ function loadVlans() {
         if (match) {
           try {
             const rawVlans = JSON.parse(match[1]);
-            state.vlans = rawVlans.filter(v =>
-              Validators.isValidVlanId(v.id) &&
-              Validators.isValidIPv4(v.ip) &&
-              Validators.isValidCIDR(v.prefix)
-            );
+            if (Array.isArray(rawVlans)) {
+              state.vlans = rawVlans.filter(isValidVlanObject);
+            }
           } catch(e) {}
         }
       }
@@ -688,7 +756,7 @@ function renderVlans() {
       <td><span class="status-pill ${v.isolate ? "status-active" : "status-neutral"}">${v.isolate ? "Isolated" : "Bridged"}</span></td>
       <td>${dhcpInfo}</td>
       <td>
-        <button class="btn btn-danger btn-del-vlan" data-idx="${idx}" data-con="VLAN${v.id}">Delete</button>
+        <button class="btn btn-danger btn-del-vlan" data-idx="${idx}" data-vlan-id="${escapeHtml(String(v.id))}">Delete</button>
       </td>
     `;
     tbody.appendChild(row);
@@ -697,8 +765,10 @@ function renderVlans() {
   tbody.querySelectorAll(".btn-del-vlan").forEach(btn => {
     btn.addEventListener("click", () => {
       const idx = parseInt(btn.getAttribute("data-idx"), 10);
-      const conName = btn.getAttribute("data-con");
-      deleteVlan(idx, conName);
+      const vlanId = btn.getAttribute("data-vlan-id");
+      if (Validators.isValidVlanId(vlanId)) {
+        deleteVlan(idx, `VLAN${parseInt(vlanId, 10)}`);
+      }
     });
   });
 }
@@ -728,6 +798,10 @@ function addVlan(e) {
   }
   if (!Validators.isValidRuleName(nameVal)) {
     setFieldError("vlan-name", "Name must be alphanumeric (max 32 chars).");
+    hasError = true;
+  }
+  if (!Validators.isValidIfname(parentVal)) {
+    setFieldError("vlan-parent", "Parent interface must be a valid device name.");
     hasError = true;
   }
   if (!Validators.isValidIPv4(ipVal)) {
@@ -768,15 +842,15 @@ function addVlan(e) {
   const newVlan = {
     id: vlanId,
     name: sanitizeString(nameVal, 32),
-    parent: sanitizeString(parentVal, 16),
+    parent: sanitizeString(parentVal, 15),
     ip: ipVal,
     prefix: parseInt(prefixVal, 10),
-    wanAccess,
-    isolate,
-    dhcp,
-    dhcpStart,
-    dhcpEnd,
-    dhcpLease
+    wanAccess: Boolean(wanAccess),
+    isolate: Boolean(isolate),
+    dhcp: Boolean(dhcp),
+    dhcpStart: dhcp ? dhcpStart : "",
+    dhcpEnd: dhcp ? dhcpEnd : "",
+    dhcpLease: dhcp ? dhcpLease : "24h"
   };
 
   const conName = `VLAN${vlanId}`;
@@ -814,6 +888,10 @@ function addVlan(e) {
 }
 
 function deleteVlan(idx, conName) {
+  if (!/^VLAN[0-9]{1,4}$/.test(conName)) {
+    showAlert("Invalid VLAN connection identifier.", true);
+    return;
+  }
   if (!confirm(`Delete ${conName}? This will remove the interface, firewall rules, and DHCP pool.`)) return;
 
   state.vlans.splice(idx, 1);
@@ -834,24 +912,33 @@ function deleteVlan(idx, conName) {
 }
 
 function saveVlanFirewallAndDns() {
+  // Deep-validate every VLAN object before serializing to nftables and dnsmasq
+  for (const v of state.vlans) {
+    if (!isValidVlanObject(v)) {
+      return Promise.reject(new Error("Invalid VLAN definition rejected during serialization."));
+    }
+  }
+
   // Generate nftables rules for VLANs
   const inputRules = [];
   const forwardRules = [];
 
   state.vlans.forEach(v => {
-    const subDev = `${v.parent}.${v.id}`;
+    const safeParent = sanitizeString(v.parent, 15);
+    const safeId = parseInt(v.id, 10);
+    const subDev = `${safeParent}.${safeId}`;
     // Allow DHCP and DNS on VLAN sub-interface
-    inputRules.push(`        iifname "${subDev}" udp dport { 53, 67 } accept comment "VLAN ${v.id} DHCP/DNS"`);
-    inputRules.push(`        iifname "${subDev}" tcp dport 53 accept comment "VLAN ${v.id} DNS"`);
+    inputRules.push(`        iifname "${subDev}" udp dport { 53, 67 } accept comment "VLAN ${safeId} DHCP/DNS"`);
+    inputRules.push(`        iifname "${subDev}" tcp dport 53 accept comment "VLAN ${safeId} DNS"`);
 
     if (!v.isolate) {
       // If not isolated from router management, allow management ports
-      inputRules.push(`        iifname "${subDev}" tcp dport $MGMT_PORTS accept comment "VLAN ${v.id} Management"`);
+      inputRules.push(`        iifname "${subDev}" tcp dport $MGMT_PORTS accept comment "VLAN ${safeId} Management"`);
     }
 
     if (v.wanAccess) {
       // Allow internet egress
-      forwardRules.push(`        iifname "${subDev}" oifname $WAN_IFACES accept comment "VLAN ${v.id} Internet Egress"`);
+      forwardRules.push(`        iifname "${subDev}" oifname $WAN_IFACES accept comment "VLAN ${safeId} Internet Egress"`);
     }
   });
 
@@ -878,11 +965,13 @@ ${forwardRules.join("\n")}
   ];
 
   state.vlans.filter(v => v.dhcp).forEach(v => {
-    dnsLines.push(`# VLAN ${v.id} (${v.name})`);
-    dnsLines.push(`listen-address=${v.ip}`);
-    dnsLines.push(`dhcp-range=set:vlan${v.id},${v.dhcpStart},${v.dhcpEnd},255.255.255.0,${v.dhcpLease}`);
-    dnsLines.push(`dhcp-option=tag:vlan${v.id},option:router,${v.ip}`);
-    dnsLines.push(`dhcp-option=tag:vlan${v.id},option:dns-server,${v.ip}`);
+    const safeId = parseInt(v.id, 10);
+    const safeName = sanitizeString(v.name, 32);
+    dnsLines.push(`# VLAN ${safeId} (${safeName})`);
+    dnsLines.push(`listen-address=${v.ip.trim()}`);
+    dnsLines.push(`dhcp-range=set:vlan${safeId},${v.dhcpStart.trim()},${v.dhcpEnd.trim()},255.255.255.0,${v.dhcpLease.trim()}`);
+    dnsLines.push(`dhcp-option=tag:vlan${safeId},option:router,${v.ip.trim()}`);
+    dnsLines.push(`dhcp-option=tag:vlan${safeId},option:dns-server,${v.ip.trim()}`);
     dnsLines.push("");
   });
 
@@ -904,6 +993,26 @@ ${forwardRules.join("\n")}
 // ============================================================================
 const DHCP_FILE = "/etc/dnsmasq.d/30-dhcp.conf";
 
+function isValidDHCPScopeObject(s) {
+  if (!s || typeof s !== "object") return false;
+  if (!Validators.isValidIPv4(s.rangeStart)) return false;
+  if (!Validators.isValidIPv4(s.rangeEnd)) return false;
+  if (!Validators.isValidIPv4(s.netmask)) return false;
+  if (!Validators.isValidLeaseTime(s.leaseTime)) return false;
+  if (s.gateway && !Validators.isValidIPv4(s.gateway)) return false;
+  if (s.dns && !Validators.isValidDNSList(s.dns)) return false;
+  if (s.domain && !Validators.isValidHostname(s.domain)) return false;
+  return true;
+}
+
+function isValidDHCPOptionObject(opt) {
+  if (!opt || typeof opt !== "object") return false;
+  if (!Validators.isValidDHCPScopeTag(opt.scope)) return false;
+  if (!Validators.isValidDHCPOptionCode(opt.code)) return false;
+  if (!Validators.isValidDHCPOptionVal(opt.val)) return false;
+  return true;
+}
+
 function loadDHCPScopeAndOptions() {
   const file = cockpit.file(DHCP_FILE);
   file.read()
@@ -914,11 +1023,11 @@ function loadDHCPScopeAndOptions() {
         if (match) {
           try {
             const parsed = JSON.parse(match[1]);
-            if (parsed.lanScope) {
+            if (parsed.lanScope && isValidDHCPScopeObject(parsed.lanScope)) {
               state.dhcpScope = Object.assign({}, state.dhcpScope, parsed.lanScope);
             }
             if (Array.isArray(parsed.customOptions)) {
-              state.dhcpOptions = parsed.customOptions;
+              state.dhcpOptions = parsed.customOptions.filter(isValidDHCPOptionObject);
             }
           } catch(e) {}
         }
@@ -978,6 +1087,10 @@ function saveDHCPScope(e) {
     setFieldError("dhcp-opt-gw", "Default gateway must be a valid IPv4 address.");
     hasError = true;
   }
+  if (dns && !Validators.isValidDNSList(dns)) {
+    setFieldError("dhcp-opt-dns", "DNS server(s) must be comma-separated valid IPv4 addresses.");
+    hasError = true;
+  }
   if (domain && !Validators.isValidHostname(domain)) {
     setFieldError("dhcp-opt-domain", "Domain name must be RFC 1123 format.");
     hasError = true;
@@ -988,14 +1101,16 @@ function saveDHCPScope(e) {
     return;
   }
 
+  const normalizedDns = dns ? dns.split(",").map(d => d.trim()).filter(Boolean).join(",") : "";
+
   state.dhcpScope = {
-    enabled,
+    enabled: Boolean(enabled),
     rangeStart,
     rangeEnd,
     netmask,
     leaseTime,
     gateway,
-    dns,
+    dns: normalizedDns,
     domain
   };
 
@@ -1043,12 +1158,16 @@ function addDHCPOption(e) {
   const valVal = document.getElementById("opt-val").value.trim();
 
   let hasError = false;
-  if (!codeVal || !/^[a-zA-Z0-9_-]{1,32}$/.test(codeVal)) {
+  if (!Validators.isValidDHCPScopeTag(scopeVal)) {
+    showAlert("Invalid DHCP option scope tag.", true);
+    hasError = true;
+  }
+  if (!Validators.isValidDHCPOptionCode(codeVal)) {
     setFieldError("opt-code", "Valid option code (e.g. 42 or ntp-server) required.");
     hasError = true;
   }
-  if (!valVal || !/^[a-zA-Z0-9_.,:-]{1,128}$/.test(valVal)) {
-    setFieldError("opt-val", "Valid option value required.");
+  if (!Validators.isValidDHCPOptionVal(valVal)) {
+    setFieldError("opt-val", "Valid option value required (no spaces or special characters).");
     hasError = true;
   }
 
@@ -1065,6 +1184,18 @@ function addDHCPOption(e) {
 }
 
 function writeAndApplyDHCPSettings() {
+  // Deep-validate before writing to dnsmasq configuration
+  if (!isValidDHCPScopeObject(state.dhcpScope)) {
+    showAlert("Invalid DHCP scope parameters rejected during serialization.", true);
+    return;
+  }
+  for (const opt of state.dhcpOptions) {
+    if (!isValidDHCPOptionObject(opt)) {
+      showAlert("Invalid custom DHCP option rejected during serialization.", true);
+      return;
+    }
+  }
+
   const jsonMetadata = {
     lanScope: state.dhcpScope,
     customOptions: state.dhcpOptions
@@ -1078,19 +1209,21 @@ function writeAndApplyDHCPSettings() {
 
   if (state.dhcpScope.enabled) {
     const s = state.dhcpScope;
+    const safeDns = s.dns ? s.dns.split(",").map(d => d.trim()).filter(Boolean).join(",") : "";
     lines.push("# Primary LAN DHCP Scope");
-    lines.push(`dhcp-range=${s.rangeStart},${s.rangeEnd},${s.netmask},${s.leaseTime}`);
-    if (s.gateway) lines.push(`dhcp-option=option:router,${s.gateway}`);
-    if (s.dns) lines.push(`dhcp-option=option:dns-server,${s.dns}`);
-    if (s.domain) lines.push(`dhcp-option=option:domain-name,${s.domain}`);
+    lines.push(`dhcp-range=${s.rangeStart.trim()},${s.rangeEnd.trim()},${s.netmask.trim()},${s.leaseTime.trim()}`);
+    if (s.gateway) lines.push(`dhcp-option=option:router,${s.gateway.trim()}`);
+    if (safeDns) lines.push(`dhcp-option=option:dns-server,${safeDns}`);
+    if (s.domain) lines.push(`dhcp-option=option:domain-name,${sanitizeString(s.domain, 253)}`);
     lines.push("");
   }
 
   if (state.dhcpOptions.length > 0) {
     lines.push("# Custom DHCP Options");
     state.dhcpOptions.forEach(opt => {
-      const tagPrefix = opt.scope ? `tag:${opt.scope},` : "";
-      lines.push(`dhcp-option=${tagPrefix}option:${opt.code},${opt.val}`);
+      const safeScope = opt.scope ? sanitizeString(opt.scope, 32) : "";
+      const tagPrefix = safeScope ? `tag:${safeScope},` : "";
+      lines.push(`dhcp-option=${tagPrefix}option:${sanitizeString(opt.code, 32)},${sanitizeString(opt.val, 128)}`);
     });
     lines.push("");
   }
@@ -1150,14 +1283,14 @@ function loadWireGuard() {
         if (match) {
           try {
             const data = JSON.parse(match[1]);
-            document.getElementById("wg-privkey").value = data.privkey || "";
-            document.getElementById("wg-pubkey").value = data.pubkey || "";
-            document.getElementById("wg-addr").value = data.address || "";
-            document.getElementById("wg-listen-port").value = data.listenPort || "";
-            document.getElementById("wg-peer-pubkey").value = data.peerPubkey || "";
-            document.getElementById("wg-peer-endpoint").value = data.peerEndpoint || "";
-            document.getElementById("wg-allowed-ips").value = data.allowedIps || "0.0.0.0/0";
-            document.getElementById("wg-keepalive").value = data.keepalive || "25";
+            document.getElementById("wg-privkey").value = Validators.isValidWireGuardKey(data.privkey) ? data.privkey.trim() : "";
+            document.getElementById("wg-pubkey").value = Validators.isValidWireGuardKey(data.pubkey) ? data.pubkey.trim() : "";
+            document.getElementById("wg-addr").value = Validators.isValidIPv4CIDR(data.address) ? data.address.trim() : "";
+            document.getElementById("wg-listen-port").value = Validators.isValidPort(data.listenPort) ? String(data.listenPort).trim() : "";
+            document.getElementById("wg-peer-pubkey").value = Validators.isValidWireGuardKey(data.peerPubkey) ? data.peerPubkey.trim() : "";
+            document.getElementById("wg-peer-endpoint").value = Validators.isValidEndpoint(data.peerEndpoint) ? data.peerEndpoint.trim() : "";
+            document.getElementById("wg-allowed-ips").value = Validators.isValidAllowedIPs(data.allowedIps) ? data.allowedIps.trim() : "0.0.0.0/0";
+            document.getElementById("wg-keepalive").value = Validators.isValidKeepalive(data.keepalive) ? String(data.keepalive).trim() : "25";
             document.getElementById("wg-inbound-wan").checked = !!data.inboundWan;
           } catch(e) {}
         }
@@ -1194,7 +1327,8 @@ function saveWireGuardConfig(e) {
   clearFormErrors("form-wg-config");
 
   const privkey = document.getElementById("wg-privkey").value.trim();
-  const pubkey = document.getElementById("wg-pubkey").value.trim();
+  const rawPubkey = document.getElementById("wg-pubkey").value.trim();
+  const pubkey = Validators.isValidWireGuardKey(rawPubkey) ? rawPubkey : "";
   const address = document.getElementById("wg-addr").value.trim();
   const listenPort = document.getElementById("wg-listen-port").value.trim();
   const peerPubkey = document.getElementById("wg-peer-pubkey").value.trim();
@@ -1208,8 +1342,8 @@ function saveWireGuardConfig(e) {
     setFieldError("wg-privkey", "Valid 44-character base64 private key required.");
     hasError = true;
   }
-  if (!address || !address.includes("/")) {
-    setFieldError("wg-addr", "Valid tunnel CIDR address required (e.g. 10.2.0.2/24).");
+  if (!Validators.isValidIPv4CIDR(address)) {
+    setFieldError("wg-addr", "Valid IPv4 CIDR address required (e.g. 10.2.0.2/24).");
     hasError = true;
   }
   if (listenPort && !Validators.isValidPort(listenPort)) {
@@ -1224,22 +1358,34 @@ function saveWireGuardConfig(e) {
     setFieldError("wg-peer-endpoint", "Valid endpoint required (host:port or ip:port).");
     hasError = true;
   }
+  if (!Validators.isValidAllowedIPs(allowedIps)) {
+    setFieldError("wg-allowed-ips", "Allowed IPs must be comma-separated IPv4 CIDRs (e.g. 0.0.0.0/0 or 10.2.0.0/24).");
+    hasError = true;
+  }
+  if (!Validators.isValidKeepalive(keepalive)) {
+    setFieldError("wg-keepalive", "Keepalive must be an integer between 0 and 3600.");
+    hasError = true;
+  }
 
   if (hasError) {
     showAlert("Please correct the WireGuard form errors.", true);
     return;
   }
 
+  const normalizedAllowedIps = allowedIps.split(",").map(s => s.trim()).filter(Boolean).join(", ");
+  const safePort = listenPort ? String(parseInt(listenPort, 10)) : "";
+  const safeKeepalive = keepalive !== "" ? String(parseInt(keepalive, 10)) : "";
+
   const wgData = {
     privkey,
     pubkey,
     address,
-    listenPort,
+    listenPort: safePort,
     peerPubkey,
     peerEndpoint,
-    allowedIps,
-    keepalive,
-    inboundWan
+    allowedIps: normalizedAllowedIps,
+    keepalive: safeKeepalive,
+    inboundWan: Boolean(inboundWan)
   };
 
   const lines = [
@@ -1251,22 +1397,22 @@ function saveWireGuardConfig(e) {
     `Address = ${address}`
   ];
 
-  if (listenPort) lines.push(`ListenPort = ${listenPort}`);
+  if (safePort) lines.push(`ListenPort = ${safePort}`);
   lines.push("");
   lines.push("[Peer]");
   lines.push(`PublicKey = ${peerPubkey}`);
   if (peerEndpoint) lines.push(`Endpoint = ${peerEndpoint}`);
-  lines.push(`AllowedIPs = ${allowedIps}`);
-  if (keepalive) lines.push(`PersistentKeepalive = ${keepalive}`);
+  lines.push(`AllowedIPs = ${normalizedAllowedIps}`);
+  if (safeKeepalive) lines.push(`PersistentKeepalive = ${safeKeepalive}`);
   lines.push("");
 
   // Inbound firewall rule
   let nftVpnContent = "";
-  if (inboundWan && listenPort) {
+  if (inboundWan && safePort) {
     nftVpnContent = `# Azureclaw WireGuard Inbound Rule
 table inet router {
     chain input {
-        udp dport ${listenPort} accept comment "WireGuard Inbound Listener"
+        udp dport ${safePort} accept comment "WireGuard Inbound Listener"
     }
 }
 `;
@@ -1275,9 +1421,11 @@ table inet router {
   const file = cockpit.file(WG_CONF_FILE, { superuser: "try" });
   const nftFile = cockpit.file(WG_NFT_FILE, { superuser: "try" });
 
-  file.replace(lines.join("\n"))
-    .then(() => nftFile.replace(nftVpnContent))
+  cockpit.spawn(["mkdir", "-p", "-m", "0700", "/etc/wireguard"], { superuser: "require" })
+    .then(() => file.replace(lines.join("\n")))
     .then(() => cockpit.spawn(["chmod", "0600", WG_CONF_FILE], { superuser: "require" }))
+    .then(() => nftFile.replace(nftVpnContent))
+    .then(() => cockpit.spawn(["nft", "-c", "-f", "/etc/nftables/nftables.conf"], { superuser: "require" }))
     .then(() => cockpit.spawn(["systemctl", "reload", "nftables"], { superuser: "require" }))
     .then(() => {
       showAlert("WireGuard configuration saved.");
@@ -1788,6 +1936,10 @@ function setupForms() {
         setFieldError("pf-name", "Name required (alphanumeric, max 32 chars).");
         hasError = true;
       }
+      if (!Validators.isValidProto(proto)) {
+        setFieldError("pf-proto", "Select TCP, UDP, or Both.");
+        hasError = true;
+      }
       if (!Validators.isValidPort(wanPort)) {
         setFieldError("pf-wan-port", "Valid port 1-65535 required.");
         hasError = true;
@@ -1835,9 +1987,15 @@ function setupForms() {
       if (!Validators.isValidMAC(mac)) {
         setFieldError("res-mac", "Valid MAC format (00:11:22:33:44:55) required.");
         hasError = true;
+      } else if (state.reservations.some(r => r.mac === mac)) {
+        setFieldError("res-mac", "A reservation for this MAC address already exists.");
+        hasError = true;
       }
       if (!Validators.isValidIPv4(ip)) {
         setFieldError("res-ip", "Valid IPv4 address required.");
+        hasError = true;
+      } else if (state.reservations.some(r => r.ip === ip)) {
+        setFieldError("res-ip", "A reservation for this IP address already exists.");
         hasError = true;
       }
 
@@ -1867,6 +2025,9 @@ function setupForms() {
       let hasError = false;
       if (!Validators.isValidHostname(domain)) {
         setFieldError("dns-domain", "Valid domain or hostname required.");
+        hasError = true;
+      } else if (state.dnsOverrides.some(d => d.domain.toLowerCase() === domain)) {
+        setFieldError("dns-domain", "A DNS override for this domain already exists.");
         hasError = true;
       }
       if (!Validators.isValidIPv4(ip)) {
