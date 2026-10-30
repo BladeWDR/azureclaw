@@ -1,6 +1,7 @@
 /**
  * Azureclaw Cockpit Extension
  * Declarative router management for nftables port forwards and dnsmasq DHCP/DNS
+ * Hardened with strict input validation and sanitization to prevent injection vulnerabilities.
  */
 
 let state = {
@@ -10,7 +11,84 @@ let state = {
   leases: []
 };
 
-// --- Initialization ---
+// ============================================================================
+// Security & Validation Helpers
+// ============================================================================
+const Validators = {
+  /**
+   * Strictly validates IPv4 address (4 octets, 0-255 each, no leading zeroes unless 0).
+   * Prevents octal interpretations, spaces, control chars, and newlines.
+   */
+  isValidIPv4(ip) {
+    if (!ip || typeof ip !== "string") return false;
+    if (!/^([0-9]{1,3}\.){3}[0-9]{1,3}$/.test(ip)) return false;
+    const parts = ip.split(".");
+    return parts.every(part => {
+      const num = parseInt(part, 10);
+      return num >= 0 && num <= 255 && String(num) === part;
+    });
+  },
+
+  /**
+   * Strictly validates TCP/UDP port number (integer 1-65535).
+   */
+  isValidPort(port) {
+    if (port === undefined || port === null) return false;
+    const str = String(port);
+    if (!/^\d{1,5}$/.test(str)) return false;
+    const p = parseInt(str, 10);
+    return Number.isInteger(p) && p >= 1 && p <= 65535 && String(p) === str;
+  },
+
+  /**
+   * Whitelist validation for network protocols.
+   */
+  isValidProto(proto) {
+    if (typeof proto !== "string") return false;
+    return ["tcp", "udp", "both"].includes(proto.toLowerCase());
+  },
+
+  /**
+   * Strictly validates 48-bit MAC address (e.g. 00:11:22:33:44:55 or 00-11-22-33-44-55).
+   */
+  isValidMAC(mac) {
+    if (!mac || typeof mac !== "string") return false;
+    return /^([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})$/.test(mac);
+  },
+
+  /**
+   * Strictly validates RFC 1123 Hostnames and FQDNs.
+   * Disallows spaces, newlines, quotes, slashes, or shell control characters.
+   */
+  isValidHostname(name) {
+    if (!name || typeof name !== "string" || name.length > 253) return false;
+    return /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(name);
+  },
+
+  /**
+   * Validates rule names / labels for nftables comments.
+   * Strictly alphanumeric, underscores, hyphens, and spaces only. Max 32 chars.
+   */
+  isValidRuleName(name) {
+    if (!name || typeof name !== "string") return false;
+    return /^[a-zA-Z0-9 _.-]{1,32}$/.test(name);
+  }
+};
+
+/**
+ * Strips any potential control characters, newlines, and quotes from string values.
+ */
+function sanitizeString(str, maxLen = 64) {
+  if (!str) return "";
+  return String(str)
+    .replace(/[\r\n\t\0;'"$`\\{}()[\]]/g, "")
+    .trim()
+    .slice(0, maxLen);
+}
+
+// ============================================================================
+// Initialization
+// ============================================================================
 document.addEventListener("DOMContentLoaded", () => {
   setupTabs();
   setupForms();
@@ -27,7 +105,9 @@ function refreshAll() {
   loadDNSOverrides();
 }
 
-// --- Alerts ---
+// ============================================================================
+// Alert & Notification System
+// ============================================================================
 function showAlert(message, isError = false) {
   const container = document.getElementById("alert-banner");
   const box = document.getElementById("alert-box");
@@ -42,7 +122,9 @@ function showAlert(message, isError = false) {
   }, 6000);
 }
 
-// --- Tabs ---
+// ============================================================================
+// Tab Navigation
+// ============================================================================
 function setupTabs() {
   const tabs = document.querySelectorAll(".nav-tab");
   tabs.forEach(tab => {
@@ -63,16 +145,46 @@ function switchTab(tabId) {
   if (btn) btn.click();
 }
 
-// --- Forms ---
+// ============================================================================
+// Form Event Handlers with Strict Validation
+// ============================================================================
 function setupForms() {
   // Add Port Forward
   document.getElementById("form-add-pf").addEventListener("submit", (e) => {
     e.preventDefault();
-    const name = document.getElementById("pf-name").value.trim();
-    const proto = document.getElementById("pf-proto").value;
-    const wanPort = document.getElementById("pf-wan-port").value.trim();
-    const lanIp = document.getElementById("pf-lan-ip").value.trim();
-    const lanPort = document.getElementById("pf-lan-port").value.trim() || wanPort;
+    const rawName = document.getElementById("pf-name").value;
+    const rawProto = document.getElementById("pf-proto").value;
+    const rawWanPort = document.getElementById("pf-wan-port").value;
+    const rawLanIp = document.getElementById("pf-lan-ip").value;
+    const rawLanPort = document.getElementById("pf-lan-port").value || rawWanPort;
+
+    // Strict Validation
+    if (!Validators.isValidRuleName(rawName)) {
+      showAlert("Rule name must be alphanumeric (spaces, - and _ allowed), max 32 characters.", true);
+      return;
+    }
+    if (!Validators.isValidProto(rawProto)) {
+      showAlert("Invalid protocol specified. Must be TCP, UDP, or Both.", true);
+      return;
+    }
+    if (!Validators.isValidPort(rawWanPort)) {
+      showAlert("WAN port must be a valid integer between 1 and 65535.", true);
+      return;
+    }
+    if (!Validators.isValidIPv4(rawLanIp)) {
+      showAlert("LAN Target IP must be a valid IPv4 address (e.g. 192.168.1.100).", true);
+      return;
+    }
+    if (!Validators.isValidPort(rawLanPort)) {
+      showAlert("LAN destination port must be a valid integer between 1 and 65535.", true);
+      return;
+    }
+
+    const name = sanitizeString(rawName, 32);
+    const proto = rawProto.trim().toLowerCase();
+    const wanPort = parseInt(rawWanPort, 10);
+    const lanIp = rawLanIp.trim();
+    const lanPort = parseInt(rawLanPort, 10);
 
     state.portForwards.push({ name, proto, wanPort, lanIp, lanPort });
     savePortForwards();
@@ -82,9 +194,33 @@ function setupForms() {
   // Add DHCP Reservation
   document.getElementById("form-add-res").addEventListener("submit", (e) => {
     e.preventDefault();
-    const name = document.getElementById("res-name").value.trim();
-    const mac = document.getElementById("res-mac").value.trim().toLowerCase();
-    const ip = document.getElementById("res-ip").value.trim();
+    const rawName = document.getElementById("res-name").value;
+    const rawMac = document.getElementById("res-mac").value;
+    const rawIp = document.getElementById("res-ip").value;
+
+    // Strict Validation
+    if (!Validators.isValidHostname(rawName)) {
+      showAlert("Hostname must be a valid RFC 1123 hostname (no spaces, quotes, or newlines).", true);
+      return;
+    }
+    if (!Validators.isValidMAC(rawMac)) {
+      showAlert("Invalid MAC address. Must be in format 00:11:22:33:44:55.", true);
+      return;
+    }
+    if (!Validators.isValidIPv4(rawIp)) {
+      showAlert("Invalid IP address. Must be a valid IPv4 address.", true);
+      return;
+    }
+
+    const name = sanitizeString(rawName, 63);
+    const mac = rawMac.trim().toLowerCase().replace(/-/g, ":");
+    const ip = rawIp.trim();
+
+    // Check for duplicate MAC or IP
+    if (state.reservations.some(r => r.mac === mac)) {
+      showAlert("A reservation for this MAC address already exists.", true);
+      return;
+    }
 
     state.reservations.push({ name, mac, ip });
     saveReservations();
@@ -94,8 +230,21 @@ function setupForms() {
   // Add DNS Override
   document.getElementById("form-add-dns").addEventListener("submit", (e) => {
     e.preventDefault();
-    const domain = document.getElementById("dns-domain").value.trim();
-    const ip = document.getElementById("dns-ip").value.trim();
+    const rawDomain = document.getElementById("dns-domain").value;
+    const rawIp = document.getElementById("dns-ip").value;
+
+    // Strict Validation
+    if (!Validators.isValidHostname(rawDomain)) {
+      showAlert("Domain must be a valid hostname/FQDN (no spaces, quotes, or newlines).", true);
+      return;
+    }
+    if (!Validators.isValidIPv4(rawIp)) {
+      showAlert("Target IP must be a valid IPv4 address.", true);
+      return;
+    }
+
+    const domain = sanitizeString(rawDomain, 253);
+    const ip = rawIp.trim();
 
     state.dnsOverrides.push({ domain, ip });
     saveDNSOverrides();
@@ -103,7 +252,9 @@ function setupForms() {
   });
 }
 
-// --- Service Status ---
+// ============================================================================
+// Service Status
+// ============================================================================
 function loadServiceStatus() {
   cockpit.spawn(["systemctl", "is-active", "nftables"])
     .then(out => updateStatusPill("stat-nft-status", out.trim() === "active"))
@@ -121,7 +272,9 @@ function updateStatusPill(elementId, isActive) {
   el.className = "status-pill " + (isActive ? "status-active" : "status-inactive");
 }
 
-// --- Network Interfaces ---
+// ============================================================================
+// Network Interfaces
+// ============================================================================
 function loadInterfaces() {
   cockpit.spawn(["ip", "-j", "addr"])
     .then(jsonText => {
@@ -143,7 +296,7 @@ function loadInterfaces() {
         else if (iface.ifname.startsWith("tailscale") || iface.ifname.startsWith("wg")) role = "VPN Overlay";
 
         const ips = (iface.addr_info || [])
-          .map(a => `${a.local}/${a.prefixlen}`)
+          .map(a => `${escapeHtml(a.local)}/${escapeHtml(String(a.prefixlen))}`)
           .join("<br>") || "No IP";
 
         const mac = iface.address || "--";
@@ -152,8 +305,8 @@ function loadInterfaces() {
         const row = document.createElement("tr");
         row.innerHTML = `
           <td><strong>${escapeHtml(iface.ifname)}</strong></td>
-          <td>${role}</td>
-          <td><span class="status-pill ${stateClass}">${iface.operstate || "UNKNOWN"}</span></td>
+          <td>${escapeHtml(role)}</td>
+          <td><span class="status-pill ${stateClass}">${escapeHtml(iface.operstate || "UNKNOWN")}</span></td>
           <td><code>${ips}</code></td>
           <td><code>${escapeHtml(mac)}</code></td>
         `;
@@ -165,7 +318,9 @@ function loadInterfaces() {
     });
 }
 
-// --- DHCP Leases ---
+// ============================================================================
+// DHCP Leases
+// ============================================================================
 function loadDHCPLeases() {
   const file = cockpit.file("/var/lib/dnsmasq/dnsmasq.leases");
   file.read()
@@ -185,32 +340,35 @@ function loadDHCPLeases() {
         const parts = line.trim().split(/\s+/);
         if (parts.length >= 4) {
           const epoch = parseInt(parts[0], 10);
-          const mac = parts[1];
+          const mac = parts[1].toLowerCase();
           const ip = parts[2];
           const hostname = parts[3] === "*" ? "Unknown Client" : parts[3];
 
-          let expiresStr = "Expired";
-          const now = Math.floor(Date.now() / 1000);
-          if (epoch > now) {
-            const hours = Math.round((epoch - now) / 3600);
-            expiresStr = `in ${hours} hr(s)`;
+          // Validate fields read from file before presenting
+          if (Validators.isValidMAC(mac) && Validators.isValidIPv4(ip)) {
+            let expiresStr = "Expired";
+            const now = Math.floor(Date.now() / 1000);
+            if (epoch > now) {
+              const hours = Math.round((epoch - now) / 3600);
+              expiresStr = `in ${hours} hr(s)`;
+            }
+
+            state.leases.push({ epoch, mac, ip, hostname });
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+              <td><strong>${escapeHtml(hostname)}</strong></td>
+              <td><code>${escapeHtml(ip)}</code></td>
+              <td><code>${escapeHtml(mac)}</code></td>
+              <td>${escapeHtml(expiresStr)}</td>
+              <td>
+                <button class="btn btn-secondary btn-reserve" data-mac="${escapeHtml(mac)}" data-ip="${escapeHtml(ip)}" data-name="${escapeHtml(hostname)}">
+                  + Reserve IP
+                </button>
+              </td>
+            `;
+            tbody.appendChild(row);
           }
-
-          state.leases.push({ epoch, mac, ip, hostname });
-
-          const row = document.createElement("tr");
-          row.innerHTML = `
-            <td><strong>${escapeHtml(hostname)}</strong></td>
-            <td><code>${escapeHtml(ip)}</code></td>
-            <td><code>${escapeHtml(mac)}</code></td>
-            <td>${expiresStr}</td>
-            <td>
-              <button class="btn btn-secondary btn-reserve" data-mac="${escapeHtml(mac)}" data-ip="${escapeHtml(ip)}" data-name="${escapeHtml(hostname)}">
-                + Reserve IP
-              </button>
-            </td>
-          `;
-          tbody.appendChild(row);
         }
       });
 
@@ -223,7 +381,7 @@ function loadDHCPLeases() {
           switchTab("tab-dhcp-reservations");
           document.getElementById("res-mac").value = mac;
           document.getElementById("res-ip").value = ip;
-          document.getElementById("res-name").value = name !== "Unknown Client" ? name : "";
+          document.getElementById("res-name").value = (name && name !== "Unknown Client") ? name : "";
           document.getElementById("res-name").focus();
         });
       });
@@ -242,7 +400,9 @@ function updateDHCPStatCount() {
   if (el) el.textContent = `${state.leases.length} / ${state.reservations.length}`;
 }
 
-// --- Port Forwarding ---
+// ============================================================================
+// Port Forwarding (DNAT with Syntax Safety)
+// ============================================================================
 const NFT_FILE = "/etc/nftables.d/50-port-forwards.nft";
 
 function loadPortForwards() {
@@ -253,7 +413,17 @@ function loadPortForwards() {
       if (content) {
         const match = content.match(/# JSON_RULES:\s*(.+)$/m);
         if (match) {
-          try { state.portForwards = JSON.parse(match[1]); } catch(e) {}
+          try {
+            const rawRules = JSON.parse(match[1]);
+            // Re-validate all loaded rules against strict schema
+            state.portForwards = rawRules.filter(r =>
+              Validators.isValidRuleName(r.name) &&
+              Validators.isValidProto(r.proto) &&
+              Validators.isValidPort(r.wanPort) &&
+              Validators.isValidIPv4(r.lanIp) &&
+              Validators.isValidPort(r.lanPort)
+            );
+          } catch(e) {}
         }
       }
       renderPortForwards();
@@ -280,9 +450,9 @@ function renderPortForwards() {
     row.innerHTML = `
       <td><strong>${escapeHtml(rule.name)}</strong></td>
       <td><span class="badge-proto">${escapeHtml(rule.proto.toUpperCase())}</span></td>
-      <td><code>${escapeHtml(rule.wanPort)}</code></td>
+      <td><code>${escapeHtml(String(rule.wanPort))}</code></td>
       <td><code>${escapeHtml(rule.lanIp)}</code></td>
-      <td><code>${escapeHtml(rule.lanPort)}</code></td>
+      <td><code>${escapeHtml(String(rule.lanPort))}</code></td>
       <td>
         <button class="btn btn-danger btn-del-pf" data-idx="${idx}">Delete</button>
       </td>
@@ -303,13 +473,28 @@ function savePortForwards() {
   let preroutingRules = [];
   let forwardRules = [];
 
-  state.portForwards.forEach(r => {
+  // Deep validation of all rules before constructing nftables output
+  for (const r of state.portForwards) {
+    if (!Validators.isValidRuleName(r.name) ||
+        !Validators.isValidProto(r.proto) ||
+        !Validators.isValidPort(r.wanPort) ||
+        !Validators.isValidIPv4(r.lanIp) ||
+        !Validators.isValidPort(r.lanPort)) {
+      showAlert("Invalid port forward rule rejected during serialization.", true);
+      return;
+    }
+
+    const safeName = sanitizeString(r.name, 32);
+    const wanPort = parseInt(r.wanPort, 10);
+    const lanPort = parseInt(r.lanPort, 10);
+    const lanIp = r.lanIp.trim();
+
     const protocols = r.proto === "both" ? ["tcp", "udp"] : [r.proto];
     protocols.forEach(p => {
-      preroutingRules.push(`        iifname $WAN_IFACES ${p} dport ${r.wanPort} dnat to ${r.lanIp}:${r.lanPort} comment "${r.name}"`);
-      forwardRules.push(`        oifname $LAN_IFACES ip daddr ${r.lanIp} ${p} dport ${r.lanPort} ct state new accept comment "${r.name}"`);
+      preroutingRules.push(`        iifname $WAN_IFACES ${p} dport ${wanPort} dnat to ${lanIp}:${lanPort} comment "${safeName}"`);
+      forwardRules.push(`        oifname $LAN_IFACES ip daddr ${lanIp} ${p} dport ${lanPort} ct state new accept comment "${safeName}"`);
     });
-  });
+  }
 
   const content = `# Azureclaw Port Forwarding Ruleset
 # DO NOT EDIT THIS FILE DIRECTLY IF USING COCKPIT GUI
@@ -331,7 +516,7 @@ ${forwardRules.join("\n")}
   const file = cockpit.file(NFT_FILE, { superuser: "try" });
   file.replace(content)
     .then(() => {
-      // Validate configuration before reloading
+      // Validate configuration before reloading nftables
       return cockpit.spawn(["nft", "-c", "-f", "/etc/nftables/nftables.conf"], { superuser: "require" });
     })
     .then(() => {
@@ -347,7 +532,9 @@ ${forwardRules.join("\n")}
     });
 }
 
-// --- DHCP Reservations ---
+// ============================================================================
+// DHCP Reservations
+// ============================================================================
 const RES_FILE = "/etc/dnsmasq.d/50-reservations.conf";
 
 function loadReservations() {
@@ -363,10 +550,13 @@ function loadReservations() {
             const raw = line.substring("dhcp-host=".length);
             const parts = raw.split(",");
             if (parts.length >= 3) {
-              const mac = parts[0].trim();
+              const mac = parts[0].trim().toLowerCase();
               const ip = parts[1].trim();
               const name = parts[2].trim();
-              state.reservations.push({ name, mac, ip });
+
+              if (Validators.isValidMAC(mac) && Validators.isValidIPv4(ip) && Validators.isValidHostname(name)) {
+                state.reservations.push({ name, mac, ip });
+              }
             }
           }
         });
@@ -413,9 +603,17 @@ function renderReservations() {
 }
 
 function saveReservations() {
+  // Validate all entries before writing
+  for (const r of state.reservations) {
+    if (!Validators.isValidMAC(r.mac) || !Validators.isValidIPv4(r.ip) || !Validators.isValidHostname(r.name)) {
+      showAlert("Invalid reservation data rejected. Cannot contain newlines or special characters.", true);
+      return;
+    }
+  }
+
   const lines = [
     "# Azureclaw Static DHCP Reservations (Managed by Cockpit)",
-    ...state.reservations.map(r => `dhcp-host=${r.mac},${r.ip},${r.name}`),
+    ...state.reservations.map(r => `dhcp-host=${r.mac.toLowerCase()},${r.ip.trim()},${sanitizeString(r.name, 63)}`),
     ""
   ];
 
@@ -434,7 +632,9 @@ function saveReservations() {
     });
 }
 
-// --- DNS Overrides ---
+// ============================================================================
+// DNS Overrides
+// ============================================================================
 const DNS_FILE = "/etc/dnsmasq.d/50-dns-hosts.conf";
 
 function loadDNSOverrides() {
@@ -448,7 +648,11 @@ function loadDNSOverrides() {
           line = line.trim();
           const match = line.match(/^address=\/([^\/]+)\/([^\s]+)$/);
           if (match) {
-            state.dnsOverrides.push({ domain: match[1], ip: match[2] });
+            const domain = match[1].trim();
+            const ip = match[2].trim();
+            if (Validators.isValidHostname(domain) && Validators.isValidIPv4(ip)) {
+              state.dnsOverrides.push({ domain, ip });
+            }
           }
         });
       }
@@ -491,9 +695,17 @@ function renderDNSOverrides() {
 }
 
 function saveDNSOverrides() {
+  // Validate all entries before writing
+  for (const d of state.dnsOverrides) {
+    if (!Validators.isValidHostname(d.domain) || !Validators.isValidIPv4(d.ip)) {
+      showAlert("Invalid DNS override rejected. Domain must be a valid hostname without spaces or newlines.", true);
+      return;
+    }
+  }
+
   const lines = [
     "# Azureclaw DNS Host Overrides (Managed by Cockpit)",
-    ...state.dnsOverrides.map(d => `address=/${d.domain}/${d.ip}`),
+    ...state.dnsOverrides.map(d => `address=/${sanitizeString(d.domain, 253)}/${d.ip.trim()}`),
     ""
   ];
 
@@ -512,7 +724,9 @@ function saveDNSOverrides() {
     });
 }
 
-// --- Utility Functions ---
+// ============================================================================
+// Utility / HTML Escaping
+// ============================================================================
 function escapeHtml(str) {
   if (!str) return "";
   return String(str)

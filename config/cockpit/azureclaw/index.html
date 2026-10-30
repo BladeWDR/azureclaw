@@ -337,7 +337,7 @@
         <div class="form-inline-grid">
           <div class="form-group">
             <label for="pf-name">Rule Name / Service</label>
-            <input type="text" id="pf-name" placeholder="e.g. Plex Server" required>
+            <input type="text" id="pf-name" placeholder="e.g. Plex Server" pattern="^[a-zA-Z0-9 _.-]{1,32}$" maxlength="32" required>
           </div>
           <div class="form-group">
             <label for="pf-proto">Protocol</label>
@@ -353,7 +353,7 @@
           </div>
           <div class="form-group">
             <label for="pf-lan-ip">LAN Target IP</label>
-            <input type="text" id="pf-lan-ip" placeholder="e.g. 192.168.1.100" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" required>
+            <input type="text" id="pf-lan-ip" placeholder="e.g. 192.168.1.100" pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" required>
           </div>
           <div class="form-group">
             <label for="pf-lan-port">LAN (Internal) Port</label>
@@ -400,15 +400,15 @@
         <div class="form-inline-grid">
           <div class="form-group">
             <label for="res-name">Hostname / Label</label>
-            <input type="text" id="res-name" placeholder="e.g. nas.home.arpa" required>
+            <input type="text" id="res-name" placeholder="e.g. nas.home.arpa" pattern="^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$" maxlength="63" required>
           </div>
           <div class="form-group">
             <label for="res-mac">MAC Address</label>
-            <input type="text" id="res-mac" placeholder="e.g. 00:11:22:33:44:55" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$" required>
+            <input type="text" id="res-mac" placeholder="e.g. 00:11:22:33:44:55" pattern="^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$" maxlength="17" required>
           </div>
           <div class="form-group">
             <label for="res-ip">Reserved IP Address</label>
-            <input type="text" id="res-ip" placeholder="e.g. 192.168.1.50" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" required>
+            <input type="text" id="res-ip" placeholder="e.g. 192.168.1.50" pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" required>
           </div>
           <div class="form-group" style="align-self: flex-end;">
             <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Reservation</button>
@@ -449,11 +449,11 @@
         <div class="form-inline-grid">
           <div class="form-group" style="grid-column: span 2;">
             <label for="dns-domain">Domain Name / Hostname</label>
-            <input type="text" id="dns-domain" placeholder="e.g. vault.home.arpa" required>
+            <input type="text" id="dns-domain" placeholder="e.g. vault.home.arpa" pattern="^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$" maxlength="253" required>
           </div>
           <div class="form-group" style="grid-column: span 2;">
             <label for="dns-ip">Target IP Address</label>
-            <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.100" pattern="^([0-9]{1,3}\.){3}[0-9]{1,3}$" required>
+            <input type="text" id="dns-ip" placeholder="e.g. 192.168.1.100" pattern="^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.){3}(25[0-5]|(2[0-4]|1\d|[1-9]|)\d)$" required>
           </div>
           <div class="form-group" style="align-self: flex-end;">
             <button type="submit" class="btn btn-primary" style="width: 100%;">+ Add Host</button>
