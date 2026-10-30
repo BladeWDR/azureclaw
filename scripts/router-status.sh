@@ -16,7 +16,7 @@ EOF
 
 # 2. Helper to determine connection profile / role
 get_conn_name() {
-    local dev="$1"
+    local dev="${1%%@*}"
     local conn=""
     if command -v nmcli >/dev/null 2>&1; then
         conn=$(nmcli -t -f DEVICE,CONNECTION device 2>/dev/null | awk -F: -v d="$dev" '$1==d {print $2; exit}')
@@ -24,7 +24,7 @@ get_conn_name() {
     if [ -z "$conn" ] || [ "$conn" = "--" ]; then
         if [ "$dev" = "ens18" ] || [ "$dev" = "eth0" ]; then conn="WAN"
         elif [ "$dev" = "ens19" ] || [ "$dev" = "eth1" ]; then conn="LAN"
-        elif [[ "$dev" =~ (vlan|\.[0-9]+$) ]]; then conn="VLAN"
+        elif [[ "$dev" =~ ([vV][lL][aA][nN]|\.[0-9]+$) ]]; then conn="VLAN"
         elif [ "$dev" = "tailscale0" ]; then conn="Tailscale"
         elif [[ "$dev" =~ ^wg ]]; then conn="WireGuard"
         elif [[ "$dev" =~ ^(tun|tap) ]]; then conn="OpenVPN"
@@ -45,7 +45,8 @@ while read -r iface state addrs; do
     [ -z "$iface" ] || [ "$iface" = "lo" ] && continue
     [[ "$iface" =~ ^(docker|veth|br-) ]] && continue
     
-    role=$(get_conn_name "$iface")
+    clean_iface="${iface%%@*}"
+    role=$(get_conn_name "$clean_iface")
     clean_ips=""
     for ip in $addrs; do
         if [[ ! "$ip" =~ ^fe80: ]]; then
@@ -57,7 +58,7 @@ while read -r iface state addrs; do
     done
     [ -z "$clean_ips" ] && clean_ips="No IP assigned"
 
-    printf " %-12s %-16s %-8s %-32s\n" "$iface" "$role" "$state" "$clean_ips"
+    printf " %-12s %-16s %-8s %-32s\n" "$clean_iface" "$role" "$state" "$clean_ips"
 done < <(ip -br addr 2>/dev/null || true)
 
 # 4. Footer & Quick Management Info
