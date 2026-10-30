@@ -81,6 +81,8 @@ jobs:
     name: Build Proxmox / KVM QCOW2
     needs: build-container
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_vm_qcow2 }}
+    # Pinned to ubuntu-22.04 to avoid upstream osbuild issue #2579 (MountGuard MS_PRIVATE + MS_REMOUNT on kernel 7.0+)
+    # Track https://github.com/osbuild/osbuild/issues/2579 before returning to ubuntu-latest
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
@@ -153,6 +155,8 @@ jobs:
     name: Build Baremetal Installer ISO
     needs: build-container
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_baremetal_iso }}
+    # Pinned to ubuntu-22.04 to avoid upstream osbuild issue #2579 (MountGuard MS_PRIVATE + MS_REMOUNT on kernel 7.0+)
+    # Track https://github.com/osbuild/osbuild/issues/2579 before returning to ubuntu-latest
     runs-on: ubuntu-22.04
     steps:
       - name: Check out repository
