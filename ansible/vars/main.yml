@@ -50,3 +50,11 @@ alloy_prometheus_password: ""
 alloy_loki_username: ""
 alloy_loki_password: ""
 
+# MaxMind GeoIP Firewall Filtering
+geoip_enabled: false
+geoip_account_id: "YOUR_ACCOUNT_ID_HERE"
+geoip_license_key: "YOUR_LICENSE_KEY_HERE"
+geoip_mode: "block"           # "block" (denylist) or "allow" (allowlist)
+geoip_countries: ""           # e.g. "CN RU KP IR"
+geoip_direction: "both"       # "inbound", "outbound", or "both"
+

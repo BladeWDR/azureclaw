@@ -26,7 +26,7 @@ This document provides system design, architectural decisions, and operational g
 
 4. **Production Linux Networking Primitives**:
    - **Routing Engine**: Linux kernel packet forwarding (`net.ipv4.ip_forward=1`, `net.ipv6.conf.all.forwarding=1`).
-   - **Firewall & NAT**: Modern, declarative `nftables` (replaces legacy iptables).
+   - **Firewall & NAT**: Modern, declarative `nftables` (replaces legacy iptables), with native interval-set GeoIP filtering powered by MaxMind (`geoipupdate`, `libmaxminddb`, `python3-maxminddb`).
    - **DHCPv4 / DHCPv6 & DNS**: `dnsmasq` for lightweight, ultra-reliable DHCP leases, local domain resolution, and DNS caching with DNSSEC/upstream forwarding.
    - **Interface Management**: `NetworkManager` with declarative keyfiles (`/etc/NetworkManager/system-connections/`).
    - **VPN Subsystem**:
@@ -55,6 +55,9 @@ azureclaw/
 │   │   └── alloy.sysconfig            # Environment variables and listen port configuration
 │   ├── bootc/
 │   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (DPS, ext4 rootfs)
+│   ├── geoip/
+│   │   ├── GeoIP.conf                 # MaxMind geoipupdate configuration (/var/lib/GeoIP)
+│   │   └── geoip-block.conf           # Country block/allow list & direction settings
 │   ├── ssh/
 │   │   └── 99-hardening.conf          # Hardened SSH daemon config (keys only, modern ciphers)
 │   ├── sysctl.d/
@@ -78,7 +81,8 @@ azureclaw/
 ├── scripts/
 │   ├── build-container.sh             # Build local container image
 │   ├── build-disk.sh                  # Build qcow2/raw/iso via bootc-image-builder
-│   └── deploy-proxmox-vm.sh           # Proxmox VE helper (qm commands)
+│   ├── deploy-proxmox-vm.sh           # Proxmox VE helper (qm commands)
+│   └── update-geoip.sh                # MaxMind GeoLite2 fetcher & nftables set compiler
 └── docs/
     ├── proxmox-setup.md               # Step-by-step Proxmox VE testing & deployment guide
     ├── vlan-configuration.md          # 802.1Q VLAN setup, DHCP/DNS, and isolation firewall rules

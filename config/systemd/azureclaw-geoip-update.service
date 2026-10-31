@@ -1,0 +1,10 @@
+[Unit]
+Description=Azureclaw MaxMind GeoIP Database & nftables Ruleset Updater
+After=network-online.target nftables.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/azureclaw/update-geoip.sh
+StandardOutput=journal
+StandardError=journal

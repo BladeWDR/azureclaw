@@ -26,6 +26,9 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         NetworkManager-l2tp \
         NetworkManager-strongswan \
         python3-gobject-base \
+        python3-maxminddb \
+        libmaxminddb \
+        geoipupdate \
         nftables \
         dnsmasq \
         wireguard-tools \
@@ -86,9 +89,15 @@ COPY config/ssh/99-hardening.conf /etc/ssh/sshd_config.d/99-hardening.conf
 COPY config/systemd/azureclaw-firstboot.service /usr/lib/systemd/system/azureclaw-firstboot.service
 COPY config/systemd/alloy.service.d/10-permissions.conf /usr/lib/systemd/system/alloy.service.d/10-permissions.conf
 COPY config/systemd/tmpfiles-alloy.conf /usr/lib/tmpfiles.d/alloy.conf
+COPY config/systemd/tmpfiles-geoip.conf /usr/lib/tmpfiles.d/geoip.conf
+COPY config/systemd/azureclaw-geoip-update.service /usr/lib/systemd/system/azureclaw-geoip-update.service
+COPY config/systemd/azureclaw-geoip-update.timer /usr/lib/systemd/system/azureclaw-geoip-update.timer
+COPY config/geoip/GeoIP.conf /etc/GeoIP.conf
+COPY config/geoip/geoip-block.conf /etc/azureclaw/geoip-block.conf
 COPY scripts/firstboot-cleanup.sh /usr/libexec/azureclaw/firstboot-cleanup.sh
 COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
+COPY scripts/update-geoip.sh /usr/libexec/azureclaw/update-geoip.sh
 COPY config/profile.d/99-azureclaw-status.sh /etc/profile.d/99-azureclaw-status.sh
 COPY config/network/99-azureclaw-issue.sh /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh
 
@@ -112,9 +121,17 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-firstboot.service && \
     chmod 0644 /usr/lib/systemd/system/alloy.service.d/10-permissions.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/alloy.conf && \
+    chmod 0644 /usr/lib/tmpfiles.d/geoip.conf && \
+    chmod 0644 /usr/lib/systemd/system/azureclaw-geoip-update.* && \
+    chmod 0600 /etc/GeoIP.conf && \
+    chmod 0755 /etc/azureclaw && \
+    chmod 0644 /etc/azureclaw/geoip-block.conf && \
+    mkdir -p /var/lib/GeoIP && \
+    chmod 0755 /var/lib/GeoIP && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
     chmod 0755 /usr/libexec/azureclaw/firstboot-cleanup.sh && \
     chmod 0755 /usr/libexec/azureclaw/router-status.sh && \
+    chmod 0755 /usr/libexec/azureclaw/update-geoip.sh && \
     chmod 0644 /etc/profile.d/99-azureclaw-status.sh && \
     chmod 0755 /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
@@ -137,6 +154,7 @@ RUN systemctl enable NetworkManager.service && \
     systemctl enable alloy.service && \
     systemctl enable tailscaled.service && \
     systemctl enable bootc-auto-update.timer && \
+    systemctl enable azureclaw-geoip-update.timer && \
     systemctl enable azureclaw-firstboot.service
 
 # 6. Admin User Provisioning

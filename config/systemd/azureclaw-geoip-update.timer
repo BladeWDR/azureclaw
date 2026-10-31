@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly MaxMind GeoIP Database & Firewall Set Refresh
+
+[Timer]
+OnBootSec=5min
+OnCalendar=Wed *-*-* 03:30:00
+RandomizedDelaySec=30m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

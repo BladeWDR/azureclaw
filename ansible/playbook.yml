@@ -88,6 +88,35 @@
           LOKI_PASSWORD="{{ alloy_loki_password }}"
       notify: Restart alloy
 
+    - name: Configure MaxMind GeoIP credentials
+      copy:
+        dest: /etc/GeoIP.conf
+        owner: root
+        group: root
+        mode: '0600'
+        content: |
+          # Managed by Ansible - MaxMind geoipupdate configuration
+          AccountID {{ geoip_account_id }}
+          LicenseKey {{ geoip_license_key }}
+          EditionIDs GeoLite2-Country
+          DatabaseDirectory /var/lib/GeoIP
+      notify: Update GeoIP ruleset
+
+    - name: Configure Azureclaw GeoIP firewall blocking rules
+      copy:
+        dest: /etc/azureclaw/geoip-block.conf
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          # Managed by Ansible - MaxMind GeoIP Firewall Configuration
+          GEOIP_ENABLED="{{ 'true' if geoip_enabled else 'false' }}"
+          GEOIP_MODE="{{ geoip_mode }}"
+          GEOIP_COUNTRIES="{{ geoip_countries }}"
+          GEOIP_DIRECTION="{{ geoip_direction }}"
+          GEOIP_MMDB_PATH="/var/lib/GeoIP/GeoLite2-Country.mmdb"
+      notify: Update GeoIP ruleset
+
     - name: Check bootc image deployment status
       command: bootc status
       register: bootc_status_out
@@ -112,3 +141,6 @@
       systemd:
         name: alloy
         state: restarted
+
+    - name: Update GeoIP ruleset
+      command: /usr/libexec/azureclaw/update-geoip.sh
