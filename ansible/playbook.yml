@@ -117,6 +117,32 @@
           GEOIP_MMDB_PATH="/var/lib/GeoIP/GeoLite2-Country.mmdb"
       notify: Update GeoIP ruleset
 
+    - name: Configure Dynamic DNS client (ddclient)
+      copy:
+        dest: /etc/ddclient.conf
+        owner: ddclient
+        group: ddclient
+        mode: '0600'
+        content: |
+          # Managed by Ansible - ddclient configuration
+          syslog=yes
+          ssl=yes
+          usev4={{ ddns_usev4 }}
+          protocol={{ ddns_protocol }}, \
+          {% if ddns_server | length > 0 %}
+          server={{ ddns_server }}, \
+          {% endif %}
+          {% if ddns_zone | length > 0 %}
+          zone={{ ddns_zone }}, \
+          {% endif %}
+          {% if ddns_login | length > 0 %}
+          login={{ ddns_login }}, \
+          {% endif %}
+          password={{ ddns_password }} \
+          {{ ddns_hostname }}
+      when: ddns_enabled | bool and ddns_hostname | length > 0
+      notify: Restart ddclient
+
     - name: Check bootc image deployment status
       command: bootc status
       register: bootc_status_out
@@ -144,3 +170,9 @@
 
     - name: Update GeoIP ruleset
       command: /usr/libexec/azureclaw/update-geoip.sh
+
+    - name: Restart ddclient
+      systemd:
+        name: ddclient
+        state: restarted
+        enabled: true

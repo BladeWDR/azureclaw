@@ -27,7 +27,7 @@ This document provides system design, architectural decisions, and operational g
 4. **Production Linux Networking Primitives**:
    - **Routing Engine**: Linux kernel packet forwarding (`net.ipv4.ip_forward=1`, `net.ipv6.conf.all.forwarding=1`).
    - **Firewall & NAT**: Modern, declarative `nftables` (replaces legacy iptables), with native interval-set GeoIP filtering powered by MaxMind (`geoipupdate`, `libmaxminddb`, `python3-maxminddb`).
-   - **DHCPv4 / DHCPv6 & DNS**: `dnsmasq` for lightweight, ultra-reliable DHCP leases, local domain resolution, and DNS caching with DNSSEC/upstream forwarding.
+   - **DHCPv4 / DHCPv6 & DNS**: `dnsmasq` for lightweight, ultra-reliable DHCP leases, local domain resolution, and DNS caching with DNSSEC/upstream forwarding; `ddclient` for Dynamic DNS (DDNS) updates across providers (Cloudflare, DuckDNS, Namecheap, No-IP, Porkbun).
    - **Interface Management**: `NetworkManager` with declarative keyfiles (`/etc/NetworkManager/system-connections/`).
    - **VPN Subsystem**:
      - `wireguard-tools` (`wg` / `wg-quick`) and `tailscale` (daemon + CLI for mesh networking, exit node, and subnet routing).
@@ -55,6 +55,8 @@ azureclaw/
 │   │   └── alloy.sysconfig            # Environment variables and listen port configuration
 │   ├── bootc/
 │   │   └── 10-systemd-boot.toml       # Declarative bootc installer config (DPS, ext4 rootfs)
+│   ├── ddns/
+│   │   └── ddclient.conf              # Dynamic DNS client configuration (/etc/ddclient.conf)
 │   ├── geoip/
 │   │   ├── GeoIP.conf                 # MaxMind geoipupdate configuration (/var/lib/GeoIP)
 │   │   └── geoip-block.conf           # Country block/allow list & direction settings

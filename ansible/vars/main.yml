@@ -58,3 +58,13 @@ geoip_mode: "block"           # "block" (denylist) or "allow" (allowlist)
 geoip_countries: ""           # e.g. "CN RU KP IR"
 geoip_direction: "both"       # "inbound", "outbound", or "both"
 
+# Dynamic DNS (ddclient)
+ddns_enabled: false
+ddns_protocol: "cloudflare"   # e.g. "cloudflare", "duckdns", "namecheap", "dyndns2", "porkbun"
+ddns_server: ""               # Optional server endpoint override
+ddns_zone: ""                 # Zone (required for Cloudflare, e.g. "example.com")
+ddns_login: "token"           # Username or "token"
+ddns_password: ""             # API Token or DDNS Password
+ddns_hostname: ""             # Hostname to update, e.g. "router.example.com"
+ddns_usev4: "webv4, webv4=https://checkip.amazonaws.com/"
+
