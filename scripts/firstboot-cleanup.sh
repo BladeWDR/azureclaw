@@ -6,7 +6,7 @@ set -euo pipefail
 
 if [ -f /etc/issue.d/10-azureclaw.issue ] || grep -q "First-Boot Random Credential" /etc/issue 2>/dev/null; then
     rm -f /etc/issue.d/10-azureclaw.issue 2>/dev/null || true
-    if [ -f /etc/motd ]; then
-        cp -f /etc/motd /etc/issue 2>/dev/null || true
+    if [ ! -L /etc/issue ] && [ -f /usr/lib/issue ]; then
+        ln -sf ../usr/lib/issue /etc/issue 2>/dev/null || true
     fi
 fi
