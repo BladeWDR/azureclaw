@@ -90,6 +90,7 @@ COPY config/ssh/99-hardening.conf /etc/ssh/sshd_config.d/99-hardening.conf
 COPY config/systemd/azureclaw-firstboot.service /usr/lib/systemd/system/azureclaw-firstboot.service
 COPY config/systemd/alloy.service.d/10-permissions.conf /usr/lib/systemd/system/alloy.service.d/10-permissions.conf
 COPY config/systemd/ddclient.service.d/10-azureclaw.conf /usr/lib/systemd/system/ddclient.service.d/10-azureclaw.conf
+COPY config/systemd/journald.conf.d/99-quiet-console.conf /usr/lib/systemd/journald.conf.d/99-quiet-console.conf
 COPY config/systemd/tmpfiles-alloy.conf /usr/lib/tmpfiles.d/alloy.conf
 COPY config/systemd/tmpfiles-geoip.conf /usr/lib/tmpfiles.d/geoip.conf
 COPY config/systemd/tmpfiles-ddclient.conf /usr/lib/tmpfiles.d/azureclaw-ddclient.conf
@@ -125,6 +126,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-firstboot.service && \
     chmod 0644 /usr/lib/systemd/system/alloy.service.d/10-permissions.conf && \
     chmod 0644 /usr/lib/systemd/system/ddclient.service.d/10-azureclaw.conf && \
+    chmod 0644 /usr/lib/systemd/journald.conf.d/99-quiet-console.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/alloy.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/geoip.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/azureclaw-ddclient.conf && \
