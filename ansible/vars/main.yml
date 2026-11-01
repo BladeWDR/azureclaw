@@ -68,3 +68,10 @@ ddns_password: ""             # API Token or DDNS Password
 ddns_hostname: ""             # Hostname to update, e.g. "router.example.com"
 ddns_usev4: "webv4, webv4=https://checkip.amazonaws.com/"
 
+# Network UPS Tools Client (nut-client)
+nut_enabled: false
+nut_ups_identifier: "ups@192.168.1.2"   # Format: <upsname>@<host>[:<port>]
+nut_ups_user: "monuser"
+nut_ups_password: ""
+nut_ups_role: "secondary"               # "secondary" (slave) or "primary" (master)
+

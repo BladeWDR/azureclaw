@@ -44,6 +44,12 @@ RUN dnf -y install --setopt=install_weak_deps=False \
         cockpit-ws \
         cockpit-system \
         cockpit-networkmanager \
+        certbot \
+        python3-certbot-dns-cloudflare \
+        python3-certbot-dns-rfc2136 \
+        python3-certbot-dns-route53 \
+        python3-certbot-dns-digitalocean \
+        nut-client \
         iproute \
         iptables-nft \
         conntrack-tools \
@@ -94,6 +100,7 @@ COPY config/systemd/journald.conf.d/99-quiet-console.conf /usr/lib/systemd/journ
 COPY config/systemd/tmpfiles-alloy.conf /usr/lib/tmpfiles.d/alloy.conf
 COPY config/systemd/tmpfiles-geoip.conf /usr/lib/tmpfiles.d/geoip.conf
 COPY config/systemd/tmpfiles-ddclient.conf /usr/lib/tmpfiles.d/azureclaw-ddclient.conf
+COPY config/systemd/tmpfiles-nut-certbot.conf /usr/lib/tmpfiles.d/azureclaw-nut-certbot.conf
 COPY config/systemd/azureclaw-geoip-update.service /usr/lib/systemd/system/azureclaw-geoip-update.service
 COPY config/systemd/azureclaw-geoip-update.timer /usr/lib/systemd/system/azureclaw-geoip-update.timer
 COPY config/geoip/GeoIP.conf /etc/GeoIP.conf
@@ -104,6 +111,7 @@ COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
 COPY scripts/onboarding-wizard.sh /usr/libexec/azureclaw/onboarding-wizard.sh
 COPY scripts/update-geoip.sh /usr/libexec/azureclaw/update-geoip.sh
+COPY scripts/deploy-cockpit-cert.sh /usr/libexec/azureclaw/deploy-cockpit-cert.sh
 COPY config/sudoers.d/azureclaw-onboarding /etc/sudoers.d/azureclaw-onboarding
 COPY config/profile.d/99-azureclaw-status.sh /etc/profile.d/99-azureclaw-status.sh
 COPY config/network/99-azureclaw-issue.sh /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh
@@ -132,6 +140,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/tmpfiles.d/alloy.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/geoip.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/azureclaw-ddclient.conf && \
+    chmod 0644 /usr/lib/tmpfiles.d/azureclaw-nut-certbot.conf && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-geoip-update.* && \
     chmod 0600 /etc/GeoIP.conf && \
     chown ddclient:ddclient /etc/ddclient.conf && \
@@ -150,6 +159,9 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     ln -sf /usr/libexec/azureclaw/onboarding-wizard.sh /usr/bin/azureclaw-setup && \
     chmod 0440 /etc/sudoers.d/azureclaw-onboarding && \
     chmod 0755 /usr/libexec/azureclaw/update-geoip.sh && \
+    chmod 0755 /usr/libexec/azureclaw/deploy-cockpit-cert.sh && \
+    mkdir -p /etc/letsencrypt/renewal-hooks/deploy && \
+    ln -sf /usr/libexec/azureclaw/deploy-cockpit-cert.sh /etc/letsencrypt/renewal-hooks/deploy/50-cockpit-cert.sh && \
     chmod 0644 /etc/profile.d/99-azureclaw-status.sh && \
     chmod 0755 /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
@@ -172,6 +184,7 @@ RUN systemctl enable NetworkManager.service && \
     systemctl enable alloy.service && \
     systemctl enable tailscaled.service && \
     systemctl enable ddclient.service && \
+    systemctl enable certbot-renew.timer && \
     systemctl enable bootc-auto-update.timer && \
     systemctl enable azureclaw-geoip-update.timer && \
     systemctl enable azureclaw-firstboot.service

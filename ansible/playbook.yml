@@ -151,6 +151,40 @@
       when: ddns_enabled | bool and ddns_hostname | length > 0
       notify: Restart ddclient
 
+    - name: Configure NUT mode (netclient)
+      copy:
+        dest: /etc/ups/nut.conf
+        owner: root
+        group: nut
+        mode: '0640'
+        content: |
+          # Managed by Ansible - NUT configuration
+          MODE=netclient
+      when: nut_enabled | bool
+      notify: Restart nut-monitor
+
+    - name: Configure NUT UPS monitor (upsmon.conf)
+      copy:
+        dest: /etc/ups/upsmon.conf
+        owner: root
+        group: nut
+        mode: '0640'
+        content: |
+          # Managed by Ansible - NUT upsmon configuration
+          MONITOR {{ nut_ups_identifier }} 1 {{ nut_ups_user }} {{ nut_ups_password }} {{ nut_ups_role }}
+          MINSUPPLIES 1
+          SHUTDOWNCMD "/sbin/shutdown -h +0"
+          POLLFREQ 5
+          POLLFREQALERT 5
+          HOSTSYNC 15
+          DEADTIME 15
+          POWERDOWNFLAG /etc/killpower
+          RBWARNTIME 43200
+          NOCOMMWARNTIME 300
+          FINALDELAY 5
+      when: nut_enabled | bool and nut_ups_password | length > 0
+      notify: Restart nut-monitor
+
     - name: Check bootc image deployment status
       command: bootc status
       register: bootc_status_out
@@ -182,5 +216,11 @@
     - name: Restart ddclient
       systemd:
         name: ddclient
+        state: restarted
+        enabled: true
+
+    - name: Restart nut-monitor
+      systemd:
+        name: nut-monitor
         state: restarted
         enabled: true
