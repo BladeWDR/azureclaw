@@ -26,9 +26,10 @@ echo "admin:${TEMP_PASS}" | chpasswd
 chage -d 0 admin
 
 # 3. Format console banner right above the login prompt
-# agetty automatically displays /etc/issue FOLLOWED BY /etc/issue.d/*.issue.
-# Writing to both /etc/issue and /etc/issue.d/10-azureclaw.issue causes agetty to print the banner twice.
-mkdir -p /etc/issue.d
+# Write to volatile /run/issue.d/ (mode 0666 in sticky dir) so it is automatically
+# cleared on login (even by non-root profile scripts) and never persists across reboots.
+mkdir -p /run/issue.d
+chmod 1777 /run/issue.d
 
 BANNER="
 ========================================================================
@@ -47,6 +48,7 @@ BANNER="
 ========================================================================
 "
 
-echo "${BANNER}" > /etc/issue.d/10-azureclaw.issue
+echo "${BANNER}" > /run/issue.d/10-azureclaw.issue
+chmod 0666 /run/issue.d/10-azureclaw.issue
 
 touch "${MARKER}"

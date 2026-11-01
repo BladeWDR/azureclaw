@@ -165,7 +165,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /etc/profile.d/99-azureclaw-status.sh && \
     chmod 0755 /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh && \
     chmod 0644 /usr/lib/bootc/install/10-systemd-boot.toml && \
-    echo "session optional pam_exec.so seteuid /usr/libexec/azureclaw/firstboot-cleanup.sh" >> /etc/pam.d/postlogin && \
+    echo "session optional pam_exec.so /usr/libexec/azureclaw/firstboot-cleanup.sh" >> /etc/pam.d/postlogin && \
     mkdir -p /var/lib/alloy && \
     chown -R alloy:alloy /var/lib/alloy && \
     chown -R alloy:alloy /etc/alloy && \

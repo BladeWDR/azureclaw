@@ -6,6 +6,11 @@ set -euo pipefail
 MARKER="/var/lib/azureclaw/onboarding.done"
 mkdir -p /var/lib/azureclaw
 
+# Ensure any lingering first-boot credential banner is removed as soon as wizard runs as root
+if [[ "${EUID}" -eq 0 ]]; then
+    /usr/libexec/azureclaw/firstboot-cleanup.sh 2>/dev/null || true
+fi
+
 # Ensure script runs as root (re-exec via sudo if invoked by admin)
 if [[ "${EUID}" -ne 0 ]]; then
     exec sudo /usr/libexec/azureclaw/onboarding-wizard.sh "$@"
