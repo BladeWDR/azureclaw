@@ -102,6 +102,14 @@
           DatabaseDirectory /var/lib/GeoIP
       notify: Update GeoIP ruleset
 
+    - name: Ensure /etc/azureclaw directory exists
+      file:
+        path: /etc/azureclaw
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
     - name: Configure Azureclaw GeoIP firewall blocking rules
       copy:
         dest: /etc/azureclaw/geoip-block.conf
