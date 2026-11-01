@@ -17,8 +17,9 @@ if [ -s /home/admin/.ssh/authorized_keys ]; then
     exit 0
 fi
 
-# 2. Generate a cryptographically random 16-character temporary password
-TEMP_PASS=$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)
+# 2. Generate a random 8-character temporary password using unambiguous characters
+# Excludes 0/O/o, 1/l/I, and uppercase/lowercase lookalikes that are hard to distinguish on VGA console fonts
+TEMP_PASS=$(head -c 512 /dev/urandom | tr -dc 'abcdefghjkmnpqrstuvwxyz23456789' | head -c 8)
 
 # Set the password and expire it immediately (forces password change on login)
 echo "admin:${TEMP_PASS}" | chpasswd
