@@ -64,6 +64,7 @@ done < <(ip -br addr 2>/dev/null || true)
 # 4. Footer & Quick Management Info
 cat << EOF
 ========================================================================
+ * Network Setup:      sudo azureclaw-setup
  * Cockpit Web UI:     https://${lan_ip}:9090
  * Grafana Alloy:      http://${lan_ip}:12345 (Metrics & UI)
  * OS Updates:         bootc upgrade [--apply]

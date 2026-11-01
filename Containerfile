@@ -102,7 +102,9 @@ COPY config/ddns/ddclient.conf /etc/ddclient.conf
 COPY scripts/firstboot-cleanup.sh /usr/libexec/azureclaw/firstboot-cleanup.sh
 COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
+COPY scripts/onboarding-wizard.sh /usr/libexec/azureclaw/onboarding-wizard.sh
 COPY scripts/update-geoip.sh /usr/libexec/azureclaw/update-geoip.sh
+COPY config/sudoers.d/azureclaw-onboarding /etc/sudoers.d/azureclaw-onboarding
 COPY config/profile.d/99-azureclaw-status.sh /etc/profile.d/99-azureclaw-status.sh
 COPY config/network/99-azureclaw-issue.sh /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh
 
@@ -144,6 +146,9 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
     chmod 0755 /usr/libexec/azureclaw/firstboot-cleanup.sh && \
     chmod 0755 /usr/libexec/azureclaw/router-status.sh && \
+    chmod 0755 /usr/libexec/azureclaw/onboarding-wizard.sh && \
+    ln -sf /usr/libexec/azureclaw/onboarding-wizard.sh /usr/bin/azureclaw-setup && \
+    chmod 0440 /etc/sudoers.d/azureclaw-onboarding && \
     chmod 0755 /usr/libexec/azureclaw/update-geoip.sh && \
     chmod 0644 /etc/profile.d/99-azureclaw-status.sh && \
     chmod 0755 /etc/NetworkManager/dispatcher.d/99-azureclaw-issue.sh && \

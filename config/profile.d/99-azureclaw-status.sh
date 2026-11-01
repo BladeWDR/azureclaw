@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # /etc/profile.d/99-azureclaw-status.sh
-# Display live interface status & network addresses on interactive login
-if [ -t 1 ] && [ -n "${PS1:-}" ] && [ -x /usr/libexec/azureclaw/router-status.sh ]; then
-    /usr/libexec/azureclaw/router-status.sh
+# Run first-login onboarding wizard if not yet completed, then display live router status
+if [ -t 0 ] && [ -t 1 ] && [ -n "${PS1:-}" ]; then
+    if [ ! -f /var/lib/azureclaw/onboarding.done ] && [ -x /usr/libexec/azureclaw/onboarding-wizard.sh ]; then
+        /usr/libexec/azureclaw/onboarding-wizard.sh --first-login || true
+    fi
+    if [ -x /usr/libexec/azureclaw/router-status.sh ]; then
+        /usr/libexec/azureclaw/router-status.sh
+    fi
 fi

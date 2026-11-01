@@ -1,0 +1,2 @@
+# Allow admin (wheel) to invoke the Azureclaw network onboarding wizard without re-entering password
+%wheel ALL=(root) NOPASSWD: /usr/libexec/azureclaw/onboarding-wizard.sh, /usr/libexec/azureclaw/onboarding-wizard.sh --first-login
