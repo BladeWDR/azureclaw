@@ -187,6 +187,7 @@ jobs:
             --security-opt apparmor=unconfined \
             -v /dev:/dev \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
+            -v "$(pwd)/config/bootc/iso-config.toml":/config.toml:ro \
             -v "$(pwd)/output/iso_build":/output \
             quay.io/centos-bootc/bootc-image-builder:latest \
             --type anaconda-iso \

@@ -41,6 +41,10 @@ if [ "${FREE_GB}" -lt 6 ]; then
 fi
 
 BUILDER_IMAGE="quay.io/centos-bootc/bootc-image-builder:latest"
+CONFIG_MOUNT=()
+if [ "${DISK_TYPE}" = "anaconda-iso" ] && [ -f "$(pwd)/config/bootc/iso-config.toml" ]; then
+    CONFIG_MOUNT=(-v "$(pwd)/config/bootc/iso-config.toml:/config.toml:ro")
+fi
 
 echo "==> Running bootc-image-builder container..."
 if [ "${ENGINE}" = "podman" ]; then
@@ -50,6 +54,7 @@ if [ "${ENGINE}" = "podman" ]; then
         --security-opt apparmor=unconfined \
         -v /dev:/dev \
         -v /var/lib/containers/storage:/var/lib/containers/storage \
+        "${CONFIG_MOUNT[@]}" \
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \
@@ -64,6 +69,7 @@ else
         --security-opt apparmor=unconfined \
         -v /dev:/dev \
         -v /var/lib/containers/storage:/var/lib/containers/storage \
+        "${CONFIG_MOUNT[@]}" \
         -v "${OUTPUT_DIR}":/output \
         "${BUILDER_IMAGE}" \
         --type "${DISK_TYPE}" \

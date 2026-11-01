@@ -5,5 +5,5 @@
 # Enable Discoverable Partitions Specification (DPS) with BLI
 discoverable-partitions = true
 
-# Recommended filesystem for bootc appliance
-root-fs-type = "ext4"
+# Default filesystem when using 'bootc install to-disk'
+root-fs-type = "btrfs"

@@ -19,6 +19,8 @@ RUN rpm --import https://rpm.grafana.com/gpg.key && \
 # VPN tools (wireguard, tailscale, openvpn, strongswan, NetworkManager-l2tp), and dnsmasq/nftables for core routing.
 RUN dnf -y install --setopt=install_weak_deps=False \
         sbsigntools \
+        btrfs-progs \
+        mdadm \
         NetworkManager \
         NetworkManager-tui \
         NetworkManager-libnm \

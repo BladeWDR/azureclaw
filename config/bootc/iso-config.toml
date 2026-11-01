@@ -1,0 +1,16 @@
+# config/bootc/iso-config.toml
+# bootc-image-builder configuration for the Baremetal Anaconda Installer ISO.
+#
+# By omitting 'clearpart' and 'autopart' here, Anaconda launches interactively
+# instead of blindly wiping all attached drives (such as an IODD enclosure).
+# This allows the administrator to select the target disk(s), filesystem
+# (e.g. btrfs, ext4, xfs), or software RAID (mdadm RAID1) in the UI.
+
+[customizations.installer.kickstart]
+contents = """
+graphical
+lang en_US.UTF-8
+keyboard us
+timezone UTC --utc
+rootpw --lock
+"""
