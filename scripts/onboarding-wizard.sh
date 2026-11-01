@@ -122,21 +122,19 @@ echo ""
 # -----------------------------------------------------------------------------
 DEFAULT_WAN="${PHYS_IFACES[0]}"
 while true; do
-    read -r -p " 1. Select WAN (Internet Uplink) interface [${DEFAULT_WAN}]: " wan_input
-    wan_input="${wan_input:-$DEFAULT_WAN}"
+    read -r -p " 1. Select WAN (Internet Uplink) — enter number (1-${#PHYS_IFACES[@]}) or name [1 = ${DEFAULT_WAN}]: " wan_input
+    wan_input="${wan_input:-1}"
     if [[ "$wan_input" =~ ^[0-9]+$ ]] && (( wan_input >= 1 && wan_input <= ${#PHYS_IFACES[@]} )); then
         WAN_IFACE="${PHYS_IFACES[$((wan_input - 1))]}"
         break
     elif printf '%s\n' "${PHYS_IFACES[@]}" | grep -qx "$wan_input"; then
         WAN_IFACE="$wan_input"
         break
-    elif [[ "$wan_input" =~ ^[a-zA-Z0-9_-]{1,15}$ ]]; then
-        WAN_IFACE="$wan_input"
-        break
     else
-        echo "    [!] Invalid selection. Enter a number (1-${#PHYS_IFACES[@]}) or interface name."
+        echo "    [!] Invalid choice. Enter a number from the list above (1-${#PHYS_IFACES[@]}) or an interface name (e.g. ${DEFAULT_WAN})."
     fi
 done
+echo "    -> Selected WAN interface: ${WAN_IFACE}"
 
 echo ""
 echo "    WAN IPv4 Configuration Mode for '${WAN_IFACE}':"
@@ -199,9 +197,11 @@ done
 # 2. Select LAN Interface, Subnet, and Router IP
 # -----------------------------------------------------------------------------
 DEFAULT_LAN=""
-for dev in "${PHYS_IFACES[@]}"; do
-    if [[ "$dev" != "$WAN_IFACE" ]]; then
-        DEFAULT_LAN="$dev"
+DEFAULT_LAN_IDX=1
+for i in "${!PHYS_IFACES[@]}"; do
+    if [[ "${PHYS_IFACES[$i]}" != "$WAN_IFACE" ]]; then
+        DEFAULT_LAN="${PHYS_IFACES[$i]}"
+        DEFAULT_LAN_IDX=$((i + 1))
         break
     fi
 done
@@ -209,16 +209,14 @@ DEFAULT_LAN="${DEFAULT_LAN:-${PHYS_IFACES[0]}}"
 
 echo ""
 while true; do
-    read -r -p " 2. Select LAN (Internal Network) interface [${DEFAULT_LAN}]: " lan_input
-    lan_input="${lan_input:-$DEFAULT_LAN}"
+    read -r -p " 2. Select LAN (Internal Network) — enter number (1-${#PHYS_IFACES[@]}) or name [${DEFAULT_LAN_IDX} = ${DEFAULT_LAN}]: " lan_input
+    lan_input="${lan_input:-$DEFAULT_LAN_IDX}"
     if [[ "$lan_input" =~ ^[0-9]+$ ]] && (( lan_input >= 1 && lan_input <= ${#PHYS_IFACES[@]} )); then
         LAN_IFACE="${PHYS_IFACES[$((lan_input - 1))]}"
     elif printf '%s\n' "${PHYS_IFACES[@]}" | grep -qx "$lan_input"; then
         LAN_IFACE="$lan_input"
-    elif [[ "$lan_input" =~ ^[a-zA-Z0-9_-]{1,15}$ ]]; then
-        LAN_IFACE="$lan_input"
     else
-        echo "    [!] Invalid selection. Enter a number (1-${#PHYS_IFACES[@]}) or interface name."
+        echo "    [!] Invalid choice. Enter a number from the list above (1-${#PHYS_IFACES[@]}) or an interface name (e.g. ${DEFAULT_LAN})."
         continue
     fi
 
@@ -228,6 +226,7 @@ while true; do
     fi
     break
 done
+echo "    -> Selected LAN interface: ${LAN_IFACE}"
 
 while true; do
     read -r -p "    Enter LAN Router IPv4 Address (Gateway for LAN clients) [192.168.1.1]: " LAN_IP
