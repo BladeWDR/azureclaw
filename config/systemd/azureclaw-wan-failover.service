@@ -1,0 +1,16 @@
+[Unit]
+Description=Azureclaw Multi-WAN Reachability & Failover Watchdog
+After=NetworkManager.service network-online.target nftables.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecCondition=/bin/grep -qiE '^[[:space:]]*MULTIWAN_ENABLED=["'\'']?true' /etc/azureclaw/multiwan.conf
+ExecStart=/usr/libexec/azureclaw/wan-failover.sh
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

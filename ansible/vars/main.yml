@@ -75,3 +75,14 @@ nut_ups_user: "monuser"
 nut_ups_password: ""
 nut_ups_role: "secondary"               # "secondary" (slave) or "primary" (master)
 
+# Multi-WAN Active/Backup Failover
+multiwan_enabled: false
+multiwan_primary_iface: "ens18"
+multiwan_primary_con: "WAN"
+multiwan_backup_iface: "ens20"
+multiwan_backup_con: "WAN2"
+multiwan_check_targets: "1.1.1.1 9.9.9.9"
+multiwan_check_interval: 15
+multiwan_fail_threshold: 3
+multiwan_recovery_threshold: 3
+

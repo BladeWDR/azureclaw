@@ -105,14 +105,17 @@ COPY config/systemd/tmpfiles-ddclient.conf /usr/lib/tmpfiles.d/azureclaw-ddclien
 COPY config/systemd/tmpfiles-nut-certbot.conf /usr/lib/tmpfiles.d/azureclaw-nut-certbot.conf
 COPY config/systemd/azureclaw-geoip-update.service /usr/lib/systemd/system/azureclaw-geoip-update.service
 COPY config/systemd/azureclaw-geoip-update.timer /usr/lib/systemd/system/azureclaw-geoip-update.timer
+COPY config/systemd/azureclaw-wan-failover.service /usr/lib/systemd/system/azureclaw-wan-failover.service
 COPY config/geoip/GeoIP.conf /etc/GeoIP.conf
 COPY config/geoip/geoip-block.conf /etc/azureclaw/geoip-block.conf
+COPY config/multiwan/multiwan.conf /etc/azureclaw/multiwan.conf
 COPY config/ddns/ddclient.conf /etc/ddclient.conf
 COPY scripts/firstboot-cleanup.sh /usr/libexec/azureclaw/firstboot-cleanup.sh
 COPY scripts/firstboot.sh /usr/libexec/azureclaw/firstboot.sh
 COPY scripts/router-status.sh /usr/libexec/azureclaw/router-status.sh
 COPY scripts/onboarding-wizard.sh /usr/libexec/azureclaw/onboarding-wizard.sh
 COPY scripts/update-geoip.sh /usr/libexec/azureclaw/update-geoip.sh
+COPY scripts/wan-failover.sh /usr/libexec/azureclaw/wan-failover.sh
 COPY scripts/deploy-cockpit-cert.sh /usr/libexec/azureclaw/deploy-cockpit-cert.sh
 COPY config/sudoers.d/azureclaw-onboarding /etc/sudoers.d/azureclaw-onboarding
 COPY config/profile.d/99-azureclaw-status.sh /etc/profile.d/99-azureclaw-status.sh
@@ -144,6 +147,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0644 /usr/lib/tmpfiles.d/azureclaw-ddclient.conf && \
     chmod 0644 /usr/lib/tmpfiles.d/azureclaw-nut-certbot.conf && \
     chmod 0644 /usr/lib/systemd/system/azureclaw-geoip-update.* && \
+    chmod 0644 /usr/lib/systemd/system/azureclaw-wan-failover.service && \
     chmod 0600 /etc/GeoIP.conf && \
     chown ddclient:ddclient /etc/ddclient.conf && \
     chmod 0600 /etc/ddclient.conf && \
@@ -152,6 +156,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     chmod 0700 /var/cache/ddclient && \
     chmod 0755 /etc/azureclaw && \
     chmod 0644 /etc/azureclaw/geoip-block.conf && \
+    chmod 0644 /etc/azureclaw/multiwan.conf && \
     mkdir -p /var/lib/GeoIP && \
     chmod 0755 /var/lib/GeoIP && \
     chmod 0755 /usr/libexec/azureclaw/firstboot.sh && \
@@ -161,6 +166,7 @@ RUN chmod 0600 /etc/NetworkManager/system-connections/*.nmconnection && \
     ln -sf /usr/libexec/azureclaw/onboarding-wizard.sh /usr/bin/azureclaw-setup && \
     chmod 0440 /etc/sudoers.d/azureclaw-onboarding && \
     chmod 0755 /usr/libexec/azureclaw/update-geoip.sh && \
+    chmod 0755 /usr/libexec/azureclaw/wan-failover.sh && \
     chmod 0755 /usr/libexec/azureclaw/deploy-cockpit-cert.sh && \
     mkdir -p /etc/letsencrypt/renewal-hooks/deploy && \
     ln -sf /usr/libexec/azureclaw/deploy-cockpit-cert.sh /etc/letsencrypt/renewal-hooks/deploy/50-cockpit-cert.sh && \
@@ -189,6 +195,7 @@ RUN systemctl enable NetworkManager.service && \
     systemctl enable certbot-renew.timer && \
     systemctl enable bootc-auto-update.timer && \
     systemctl enable azureclaw-geoip-update.timer && \
+    systemctl enable azureclaw-wan-failover.service && \
     systemctl enable azureclaw-firstboot.service
 
 # 6. Admin User Provisioning
