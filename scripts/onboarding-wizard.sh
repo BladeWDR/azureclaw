@@ -307,7 +307,75 @@ while true; do
 done
 
 # -----------------------------------------------------------------------------
-# 4. Review Summary & Confirm
+# 4. SSH Public Key Import (GitHub / Forgejo / GitLab)
+# -----------------------------------------------------------------------------
+echo ""
+echo " 4. SSH Public Key Import for user 'admin':"
+echo "      1) GitHub       (https://github.com/<username>.keys)"
+echo "      2) Forgejo/Gitea/GitLab (https://<forge-domain>/<username>.keys)"
+echo "      3) Direct URL   (e.g. https://github.com/bladewdr.keys)"
+echo "      4) Skip         [default]"
+
+SSH_KEYS_URL=""
+while true; do
+    read -r -p "    Select SSH key source [4 = Skip]: " ssh_src
+    ssh_src="${ssh_src:-4}"
+    case "$ssh_src" in
+        1|gh|github|GitHub)
+            read -r -p "    Enter GitHub username: " gh_user
+            gh_user="${gh_user//[[:space:]]/}"
+            if [[ "$gh_user" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+                SSH_KEYS_URL="https://github.com/${gh_user}.keys"
+                echo "    -> Will import keys from: ${SSH_KEYS_URL}"
+                break
+            else
+                echo "    [!] Invalid GitHub username."
+            fi
+            ;;
+        2|forgejo|gitea|gitlab)
+            read -r -p "    Enter Git forge domain (e.g. codeberg.org or git.example.com): " forge_host
+            forge_host="${forge_host#https://}"
+            forge_host="${forge_host#http://}"
+            forge_host="${forge_host%%/*}"
+            read -r -p "    Enter username on ${forge_host}: " forge_user
+            forge_user="${forge_user//[[:space:]]/}"
+            if [[ -n "$forge_host" && "$forge_user" =~ ^[a-zA-Z0-9._-]+$ ]]; then
+                SSH_KEYS_URL="https://${forge_host}/${forge_user}.keys"
+                echo "    -> Will import keys from: ${SSH_KEYS_URL}"
+                break
+            else
+                echo "    [!] Invalid forge host or username."
+            fi
+            ;;
+        3|url|URL)
+            read -r -p "    Enter full .keys URL (e.g. https://github.com/bladewdr.keys): " raw_url
+            raw_url="${raw_url//[[:space:]]/}"
+            if [[ "$raw_url" =~ ^https?://.+ ]]; then
+                SSH_KEYS_URL="$raw_url"
+                echo "    -> Will import keys from: ${SSH_KEYS_URL}"
+                break
+            else
+                echo "    [!] URL must start with https:// or http://"
+            fi
+            ;;
+        4|skip|Skip|n|N|no)
+            SSH_KEYS_URL=""
+            break
+            ;;
+        https://* | http://*)
+            # Convenience: allow pasting URL directly at the menu prompt
+            SSH_KEYS_URL="${ssh_src//[[:space:]]/}"
+            echo "    -> Will import keys from: ${SSH_KEYS_URL}"
+            break
+            ;;
+        *)
+            echo "    [!] Please enter 1 (GitHub), 2 (Forgejo/GitLab), 3 (Direct URL), or 4 (Skip)."
+            ;;
+    esac
+done
+
+# -----------------------------------------------------------------------------
+# 5. Review Summary & Confirm
 # -----------------------------------------------------------------------------
 echo ""
 echo "========================================================================"
@@ -323,6 +391,11 @@ echo "  * DHCP Range (LAN):   ${DHCP_START} - ${DHCP_END} (Lease: ${DHCP_LEASE})
 echo "  * LAN Domain:         ${LAN_DOMAIN}"
 echo "  * Upstream DNS:       ${UPSTREAM_DNS_LIST[*]}"
 echo "  * WAN DHCP Protection: except-interface=${WAN_IFACE} enforced in dnsmasq"
+if [[ -n "$SSH_KEYS_URL" ]]; then
+    echo "  * SSH Key Import:     ${SSH_KEYS_URL}"
+else
+    echo "  * SSH Key Import:     Skipped"
+fi
 echo "========================================================================"
 echo ""
 read -r -p " Apply this configuration now? [Y/n]: " confirm_apply
@@ -481,6 +554,36 @@ if dnsmasq --test; then
 else
     echo " [!] ERROR: dnsmasq configuration test failed!" >&2
     exit 1
+fi
+
+if [[ -n "$SSH_KEYS_URL" ]]; then
+    echo " ==> Fetching SSH public keys from ${SSH_KEYS_URL}..."
+    mkdir -p /home/admin/.ssh
+    chmod 0700 /home/admin/.ssh
+    touch /home/admin/.ssh/authorized_keys
+    chmod 0600 /home/admin/.ssh/authorized_keys
+
+    if raw_keys=$(curl -fsSL --retry 3 --retry-delay 2 --max-time 15 "$SSH_KEYS_URL" 2>/dev/null); then
+        valid_keys=$(printf '%s\n' "$raw_keys" | grep -E '^(ssh-(rsa|ed25519|dss)|ecdsa-sha2-nistp(256|384|521)|sk-(ssh-ed25519|ecdsa-sha2-nistp256)@openssh\.com) ' || true)
+        if [[ -n "$valid_keys" ]]; then
+            added_count=0
+            while IFS= read -r key_line; do
+                [[ -z "$key_line" ]] && continue
+                if ! grep -qxF "$key_line" /home/admin/.ssh/authorized_keys 2>/dev/null; then
+                    echo "$key_line" >> /home/admin/.ssh/authorized_keys
+                    ((added_count += 1))
+                fi
+            done <<< "$valid_keys"
+            chown -R admin:admin /home/admin/.ssh
+            restorecon -R /home/admin/.ssh 2>/dev/null || true
+            total_count=$(grep -cE '^(ssh-|ecdsa-|sk-)' /home/admin/.ssh/authorized_keys 2>/dev/null || echo 0)
+            echo "     [✓] Imported ${added_count} new SSH key(s) (${total_count} total in /home/admin/.ssh/authorized_keys)."
+        else
+            echo "     [!] WARNING: No valid OpenSSH public keys found at ${SSH_KEYS_URL}." >&2
+        fi
+    else
+        echo "     [!] WARNING: Could not reach ${SSH_KEYS_URL} (check WAN link or re-run 'sudo azureclaw-setup')." >&2
+    fi
 fi
 
 touch "$MARKER"
