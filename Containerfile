@@ -1,4 +1,4 @@
-FROM quay.io/fedora/fedora-bootc:44
+FROM quay.io/fedora/fedora-bootc:45
 
 # Labels for OCI image tracking
 LABEL org.opencontainers.image.title="azureclaw" \
