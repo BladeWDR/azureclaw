@@ -12,7 +12,7 @@ This project is not in any way affiliated with Microsoft or Microsoft Azure.
 
 | Component | Implementation | Description |
 |---|---|---|
-| **Base Operating System** | Fedora 45 (`bootc` / OSTree) | Read-only `/usr` filesystem with atomic image updates and rollback via GRUB/bootupd. |
+| **Base Operating System** | Fedora 44 (`bootc` / OSTree) | Read-only `/usr` filesystem with atomic image updates and rollback via GRUB/bootupd. |
 | **Routing & Firewall** | Linux Kernel & `nftables` | Packet forwarding (`ip_forward=1`), NAT masquerading, and a zero-WAN-exposure stealth firewall. |
 | **DHCP & DNS** | `dnsmasq` | Lightweight DHCP server and caching DNS resolver with modular snippet support (`/etc/dnsmasq.d/`). |
 | **Network Management** | `NetworkManager` | Declarative connection keyfiles in `/etc/NetworkManager/system-connections/`. |
